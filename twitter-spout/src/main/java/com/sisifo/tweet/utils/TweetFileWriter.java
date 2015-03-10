@@ -13,7 +13,6 @@ import com.sisifo.tweet.JsonTweetEntity;
 import com.sisifo.tweet.JsonTweetHashtag;
 import com.sisifo.tweet.JsonTweetUrl;
 import com.sisifo.tweet.JsonTweetUserMention;
-import com.sisifo.tweet.JsonUserMentions;
 import com.sisifo.tweet.Tweet;
 import com.sisifo.tweet.TweetUser;
 

@@ -1,1 +1,7 @@
 target/
+twitter-spout/tweetHashtags.csv
+twitter-spout/tweetUrls.csv
+twitter-spout/tweetUserMentions.csv
+twitter-spout/tweetUserUrls.csv
+twitter-spout/tweetUsers.csv
+twitter-spout/tweets.csv
