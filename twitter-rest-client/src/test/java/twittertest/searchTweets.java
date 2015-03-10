@@ -10,6 +10,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.gson.Gson;
@@ -31,7 +32,7 @@ public class searchTweets {
 		// Step 1. Encode consumer key and secret
 		// AND
 		// Step 2. Obtain a bearer token
-		Client client = ClientUtils.getClientWithSslContext();
+		Client client = ClientUtils.getClientWithAuthentication();
 	    Response postResponse = client.target("https://api.twitter.com/oauth2/token")
 	            .request(MediaType.APPLICATION_JSON)
 	            .property(HttpAuthenticationFeature.HTTP_AUTHENTICATION_BASIC_USERNAME, consumerKey)
@@ -39,11 +40,11 @@ public class searchTweets {
 	            .post(Entity.entity("grant_type=client_credentials",  MediaType.APPLICATION_FORM_URLENCODED));
 
 	    // Step 3. Authenticate API requests with the bearer token
-	    String output = postResponse.readEntity(String.class);
+	    String tokenOutput = postResponse.readEntity(String.class);
 	    // {"token_type":"bearer","access_token":"AAAAAAAAAAAAAAAAAAAAA..."}
 	    GsonBuilder builder = new GsonBuilder();
 	    Gson gson = builder.create();
-  	  	TwitterToken token = gson.fromJson(output, TwitterToken.class);
+  	  	TwitterToken token = gson.fromJson(tokenOutput, TwitterToken.class);
   	  	
 		Response response = client.target("https://api.twitter.com/1.1/search/tweets.json")
 				.queryParam("q", "@psebastianbueno")
@@ -51,7 +52,9 @@ public class searchTweets {
 				.request(MediaType.APPLICATION_JSON)
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token.getAccess_token())
 	            .get();
-	    
+
+		Assert.assertEquals(200, response.getStatus());
+		String searchTweetsOutput = response.readEntity(String.class);
 		return;
 		
 	}

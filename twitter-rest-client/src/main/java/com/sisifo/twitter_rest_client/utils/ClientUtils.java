@@ -18,6 +18,19 @@ import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 
 public class ClientUtils {
 
+	public static Client getClientWithAuthentication() throws NoSuchAlgorithmException, KeyManagementException {
+		Client client = ClientBuilder.newClient();
+		createAndAddAuthenticationFeature(client);
+		return client;
+	}
+	
+	private static void createAndAddAuthenticationFeature(Client client) {
+		HttpAuthenticationFeature feature = HttpAuthenticationFeature.basicBuilder().build();
+		client.register(feature);
+		
+	}
+	
+	// TODO not very nice, and useless anyhow
 	public static Client getClientWithSslContext() throws NoSuchAlgorithmException, KeyManagementException {
 		HostnameVerifier hostnameVerifier = ClientUtils.getDefaultHostnameVerifier();
         System.setProperty("jsse.enableSNIExtension", "false");
@@ -27,8 +40,7 @@ public class ClientUtils {
 		ctx.init(null, certs, new SecureRandom());
 		Client client = ClientBuilder.newBuilder().sslContext(ctx).hostnameVerifier(hostnameVerifier).build();
 		
-		HttpAuthenticationFeature feature = HttpAuthenticationFeature.basicBuilder().build();
-		client.register(feature);
+		createAndAddAuthenticationFeature(client);
 		return client;
 	}	
 	
