@@ -1,5 +1,8 @@
-package com.sisifo.tweet;
+package com.sisifo.twitter_model.tweet;
 
+import javax.xml.bind.annotation.XmlRootElement;
+
+@XmlRootElement
 public class TweetPlace {
 
 	private String full_name;

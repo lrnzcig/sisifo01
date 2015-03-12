@@ -15,6 +15,8 @@ import org.junit.Test;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.sisifo.twitter_model.tweet.JsonTweetsRestApi;
+import com.sisifo.twitter_model.utils.TweetFileWriter;
 import com.sisifo.twitter_rest_client.utils.ClientUtils;
 import com.sisifo.twitter_rest_client.utils.TwitterToken;
 
@@ -54,7 +56,9 @@ public class searchTweets {
 	            .get();
 
 		Assert.assertEquals(200, response.getStatus());
-		String searchTweetsOutput = response.readEntity(String.class);
+		JsonTweetsRestApi searchTweetsOutput = response.readEntity(JsonTweetsRestApi.class);
+		TweetFileWriter w = new TweetFileWriter();
+		w.writeToFile(searchTweetsOutput.getStatuses());
 		return;
 		
 	}

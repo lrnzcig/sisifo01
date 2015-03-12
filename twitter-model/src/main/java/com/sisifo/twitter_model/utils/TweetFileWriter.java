@@ -1,4 +1,4 @@
-package com.sisifo.tweet.utils;
+package com.sisifo.twitter_model.utils;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -9,12 +9,12 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.QuoteMode;
 
-import com.sisifo.tweet.JsonTweetEntity;
-import com.sisifo.tweet.JsonTweetHashtag;
-import com.sisifo.tweet.JsonTweetUrl;
-import com.sisifo.tweet.JsonTweetUserMention;
-import com.sisifo.tweet.Tweet;
-import com.sisifo.tweet.TweetUser;
+import com.sisifo.twitter_model.tweet.JsonTweetEntity;
+import com.sisifo.twitter_model.tweet.JsonTweetHashtag;
+import com.sisifo.twitter_model.tweet.JsonTweetUrl;
+import com.sisifo.twitter_model.tweet.JsonTweetUserMention;
+import com.sisifo.twitter_model.tweet.Tweet;
+import com.sisifo.twitter_model.tweet.TweetUser;
 
 public class TweetFileWriter {
 
@@ -281,6 +281,16 @@ public class TweetFileWriter {
         } catch (IOException e) {
             e.printStackTrace();
         }
+	}
+
+	public void writeToFile(Tweet[] statuses) {
+		if (statuses == null) {
+			return;
+		}
+		for (Tweet tweet : statuses) {
+			writeToFile(tweet);
+		}
+		
 	}
 	
 	

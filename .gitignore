@@ -5,3 +5,9 @@ twitter-spout/tweetUserMentions.csv
 twitter-spout/tweetUserUrls.csv
 twitter-spout/tweetUsers.csv
 twitter-spout/tweets.csv
+twitter-rest-client/tweetHashtags.csv
+twitter-rest-client/tweetUrls.csv
+twitter-rest-client/tweetUserMentions.csv
+twitter-rest-client/tweetUserUrls.csv
+twitter-rest-client/tweetUsers.csv
+twitter-rest-client/tweets.csv
