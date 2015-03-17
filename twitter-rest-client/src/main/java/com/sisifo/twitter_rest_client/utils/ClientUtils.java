@@ -12,14 +12,17 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.core.Response;
 
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 import org.glassfish.jersey.jackson.JacksonFeature;
 
+import com.sisifo.twitter_rest_client.exceptions.SisifoHttpErrorException;
+
 
 public class ClientUtils {
 
-	public static Client getClientWithAuthentication() throws NoSuchAlgorithmException, KeyManagementException {
+	public static Client getClientWithAuthenticationAndJackson() {
 		Client client = ClientBuilder.newClient();
 		createAndAddAuthenticationFeature(client);
 		// Jackson
@@ -78,6 +81,12 @@ public class ClientUtils {
 						}
 	            	}
 	        	};
+	}
+
+	public static void checkResponseStatus(Response response) throws SisifoHttpErrorException {
+		if (response.getStatus() != 200) {
+			throw new SisifoHttpErrorException(response);
+		}
 	}
 
 }

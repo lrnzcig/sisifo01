@@ -3,6 +3,9 @@ package com.sisifo.twitter_model.utils;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import org.apache.commons.csv.CSVFormat;
@@ -21,6 +24,7 @@ public class TweetFileWriter {
 
 	private CSVFormat csvFormat;
 	
+	private static final String TWEET_FILE_DEFAULT_NAME = "tweets";
 	private static final Object[] TWEET_HEADER = {"created_at",
 		"favorite_count",
 		"id",
@@ -32,10 +36,11 @@ public class TweetFileWriter {
 		"retweeted_id",
 		"text",
 		"truncated",
-		"user_id"}; 
+		"user_id"};
 	private FileWriter tweetFileWriter;
 	private CSVPrinter tweetCsvPrinter;
 
+	private static final String TWEET_USER_FILE_DEFAULT_NAME = "tweetUsers";
 	private static final Object[] TWEET_USER_HEADER = {"contributors_enabled",
 		"created_at",
 		"description",
@@ -57,18 +62,21 @@ public class TweetFileWriter {
 	private FileWriter tweetUserFileWriter;
 	private CSVPrinter tweetUserCsvPrinter;
 	
+	private static final String TWEET_HASHTAG_FILE_DEFAULT_NAME = "tweetHashtags";
 	private static final Object[] TWEET_HASHTAG_HEADER = {"tweet_id",
 		"hashtag"
 	};
 	private FileWriter tweetHashtagFileWriter;
 	private CSVPrinter tweetHashtagCsvPrinter;
 
+	private static final String TWEET_URL_FILE_DEFAULT_NAME = "tweetUrls";
 	private static final Object[] TWEET_URL_HEADER = {"tweet_id",
 		"url"
 	};
 	private FileWriter tweetUrlFileWriter;
 	private CSVPrinter tweetUrlCsvPrinter;
 
+	private static final String TWEET_USER_MENTION_FILE_DEFAULT_NAME = "tweetUserMentions";
 	private static final Object[] TWEET_USER_MENTION_HEADER = {"tweet_id",
 		"source_user_id",
 		"target_user_id"
@@ -76,6 +84,7 @@ public class TweetFileWriter {
 	private FileWriter tweetUserMentionFileWriter;
 	private CSVPrinter tweetUserMentionCsvPrinter;
 
+	private static final String TWEET_USER_URL_FILE_DEFAULT_NAME = "tweetUserUrls";
 	private static final Object[] TWEET_USER_URL_HEADER = {"tweet_id",
 		"url"
 	};
@@ -83,37 +92,60 @@ public class TweetFileWriter {
 	private CSVPrinter tweetUserUrlCsvPrinter;
 
 	public TweetFileWriter() {
+		this(null);
+	}
+	
+	public TweetFileWriter(String query) {
 		super();
 		csvFormat = CSVFormat.DEFAULT.withDelimiter(';').withQuote('\'').withQuoteMode(QuoteMode.NON_NUMERIC);
+		createFiles(query);
+	}
+
+	private void createFiles(String fileSuffix) {
 		try {
-			tweetFileWriter = new FileWriter("tweets.csv");
+			String fileName = addSuffixAndExtension(TWEET_FILE_DEFAULT_NAME, fileSuffix);
+			tweetFileWriter = new FileWriter(fileName);
 	    	tweetCsvPrinter = new CSVPrinter(tweetFileWriter, csvFormat);
 	    	tweetCsvPrinter.printRecord(TWEET_HEADER);
 	    	
-	    	tweetUserFileWriter = new FileWriter("tweetUsers.csv");
+	    	fileName = addSuffixAndExtension(TWEET_USER_FILE_DEFAULT_NAME, fileSuffix);
+	    	tweetUserFileWriter = new FileWriter(fileName);
 	    	tweetUserCsvPrinter = new CSVPrinter(tweetUserFileWriter, csvFormat);
 	    	tweetUserCsvPrinter.printRecord(TWEET_USER_HEADER);
 
-	    	tweetHashtagFileWriter = new FileWriter("tweetHashtags.csv");
+	    	fileName = addSuffixAndExtension(TWEET_HASHTAG_FILE_DEFAULT_NAME, fileSuffix);
+	    	tweetHashtagFileWriter = new FileWriter(fileName);
 	    	tweetHashtagCsvPrinter = new CSVPrinter(tweetHashtagFileWriter, csvFormat);
 	    	tweetHashtagCsvPrinter.printRecord(TWEET_HASHTAG_HEADER);
 
-	    	tweetUrlFileWriter = new FileWriter("tweetUrls.csv");
+	    	fileName = addSuffixAndExtension(TWEET_URL_FILE_DEFAULT_NAME, fileSuffix);
+	    	tweetUrlFileWriter = new FileWriter(fileName);
 	    	tweetUrlCsvPrinter = new CSVPrinter(tweetUrlFileWriter, csvFormat);
 	    	tweetUrlCsvPrinter.printRecord(TWEET_URL_HEADER);
 
-	    	tweetUserMentionFileWriter = new FileWriter("tweetUserMentions.csv");
+	    	fileName = addSuffixAndExtension(TWEET_USER_MENTION_FILE_DEFAULT_NAME, fileSuffix);
+	    	tweetUserMentionFileWriter = new FileWriter(fileName);
 	    	tweetUserMentionCsvPrinter = new CSVPrinter(tweetUserMentionFileWriter, csvFormat);
 	    	tweetUserMentionCsvPrinter.printRecord(TWEET_USER_MENTION_HEADER);
 
-	    	tweetUserUrlFileWriter = new FileWriter("tweetUserUrls.csv");
+	    	fileName = addSuffixAndExtension(TWEET_USER_URL_FILE_DEFAULT_NAME, fileSuffix);
+	    	tweetUserUrlFileWriter = new FileWriter(fileName);
 	    	tweetUserUrlCsvPrinter = new CSVPrinter(tweetUserUrlFileWriter, csvFormat);
 	    	tweetUserUrlCsvPrinter.printRecord(TWEET_USER_URL_HEADER);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
-		}
+		}		
 	}
 	
+	private String addSuffixAndExtension(String defaultName,
+			String fileSuffix) {
+		String fileName = defaultName;
+		if (fileSuffix != null) {
+			fileName += fileSuffix.replaceAll("[^a-zA-Z0-9]+","_");
+		}
+		return fileName + ".csv";
+	}
+
 	private List<List<Object>> getTweetHashtagRecords(Tweet tweet) {
 		JsonTweetEntity entities = tweet.getEntities();
 		if (entities == null 
@@ -238,6 +270,9 @@ public class TweetFileWriter {
 		} catch (IOException e) {
 			close();
 			throw new RuntimeException(e);
+		} catch (NullPointerException e) {
+			// ignore this tweet
+			// TODO mejorar control de errores
 		}
 	}
 
@@ -259,23 +294,18 @@ public class TweetFileWriter {
 	}
 
 	public void close() {
+		flush();
         try {
-        	tweetFileWriter.flush();
         	tweetFileWriter.close();
             tweetCsvPrinter.close();
-            tweetUserFileWriter.flush();
             tweetUserFileWriter.close();
             tweetUserCsvPrinter.close();
-            tweetHashtagFileWriter.flush();
             tweetHashtagFileWriter.close();
             tweetHashtagCsvPrinter.close();
-            tweetUrlFileWriter.flush();
             tweetUrlFileWriter.close();
             tweetUrlCsvPrinter.close();
-            tweetUserMentionFileWriter.flush();
             tweetUserMentionFileWriter.close();
             tweetUserMentionCsvPrinter.close();
-            tweetUserUrlFileWriter.flush();
             tweetUserUrlFileWriter.close();
             tweetUserUrlCsvPrinter.close();
         } catch (IOException e) {
@@ -283,14 +313,50 @@ public class TweetFileWriter {
         }
 	}
 
-	public void writeToFile(Tweet[] statuses) {
+	/**
+	 * Writes content to file
+	 * 
+	 * @param statuses array of tweets
+	 * @param sort if true, sorting the tweets by id
+	 * @return if sort, the last tweet which was written
+	 */
+	public Tweet writeToFile(Tweet[] statuses, boolean sort) {
 		if (statuses == null) {
-			return;
+			return null;
 		}
+		List<Tweet> tweets = Arrays.asList(statuses);
+		if (sort) {
+			Collections.sort(tweets, new Comparator<Tweet>() {
+
+				@Override
+				public int compare(Tweet o1, Tweet o2) {
+					return o2.getId().compareTo(o1.getId());
+				}
+			});
+		}
+		Tweet lastTweet = null;
 		for (Tweet tweet : statuses) {
 			writeToFile(tweet);
+			lastTweet = tweet;
 		}
-		
+		if (sort) {
+			return lastTweet;
+		} else {
+			return null;
+		}
+	}
+
+	public void flush() {
+        try {
+        	tweetFileWriter.flush();
+            tweetUserFileWriter.flush();
+            tweetHashtagFileWriter.flush();
+            tweetUrlFileWriter.flush();
+            tweetUserMentionFileWriter.flush();
+            tweetUserUrlFileWriter.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 	}
 	
 	
