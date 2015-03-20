@@ -1,0 +1,6 @@
+- datatypes
+- special caracters (users?)
+- carriage returns
+- duplicated registers (in particular followers and user mentions, users)
+- users.friends_count
+- 
