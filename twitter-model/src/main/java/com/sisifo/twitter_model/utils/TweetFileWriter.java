@@ -223,6 +223,7 @@ public class TweetFileWriter {
 		record.add(user.getDescription());
 		record.add(user.getFavourites_count());
 		record.add(user.getFollowers_count());
+		record.add(user.getFriends_count());
 		record.add(user.getId());
 		record.add(user.isIs_translator());
 		record.add(user.getListed_count());
@@ -272,7 +273,7 @@ public class TweetFileWriter {
 			throw new RuntimeException(e);
 		} catch (NullPointerException e) {
 			// ignore this tweet
-			// TODO mejorar control de errores
+			// TODO improve this!
 		}
 	}
 

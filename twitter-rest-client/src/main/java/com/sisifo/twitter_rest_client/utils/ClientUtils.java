@@ -18,6 +18,7 @@ import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 import org.glassfish.jersey.jackson.JacksonFeature;
 
 import com.sisifo.twitter_rest_client.exceptions.SisifoHttpErrorException;
+import com.sisifo.twitter_rest_client.exceptions.SisifoTooManyRequestsException;
 
 
 public class ClientUtils {
@@ -83,8 +84,11 @@ public class ClientUtils {
 	        	};
 	}
 
-	public static void checkResponseStatus(Response response) throws SisifoHttpErrorException {
+	public static void checkResponseStatus(Response response) throws SisifoHttpErrorException, SisifoTooManyRequestsException {
 		if (response.getStatus() != 200) {
+			if (response.getStatus() == 429) {
+				throw new SisifoTooManyRequestsException(response);
+			}
 			throw new SisifoHttpErrorException(response);
 		}
 	}

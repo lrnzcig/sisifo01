@@ -88,12 +88,12 @@ select * from tweet;
 select * from thashtag;
 select * from turl;
 select * from tuser;
+select * from tusermention;
 
 
 select BOOLEAN2CHAR('true') from dual;
 select CLEANUP('a') from dual;
 select regexp_replace('0', '[^09]', '') from dual;
--- drop table tweet;
 -- delete from tweet;
 -- delete from thashtag;
 -- delete from tusermention;

@@ -13,11 +13,6 @@
     <version>0.0.1-SNAPSHOT</version>
   </parent>
 
-  <properties>
-    <git.dir>${project.basedir}/../.git</git.dir>
-    <!-- this makes maven-tools not bump us to snapshot versions -->
-    <stabilized>true</stabilized>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>com.twitter</groupId>

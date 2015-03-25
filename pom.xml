@@ -7,13 +7,13 @@
   <version>0.0.1-SNAPSHOT</version>
   <url>https://github.com/lrnzcig/sisifo01</url>
 
-  <name>Twitter Client</name>
-  <description>Java for consuming Twitter's Streaming API and REST API into database</description>
+  <name>Sisifo Twitter Client</name>
+  <description>Java for collecting data of Twitter's Streaming API and REST API into database</description>
 
   <modules>
     <module>twitter-model</module>
-    <module>twitter-spout</module>
     <module>twitter-rest-client</module>
+    <module>twitter-data-collection</module>
   </modules>
 
   <dependencies>

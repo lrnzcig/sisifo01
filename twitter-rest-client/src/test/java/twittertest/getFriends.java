@@ -3,6 +3,7 @@ package twittertest;
 import org.junit.Test;
 
 import com.sisifo.twitter_model.utils.FriendsFileWriter;
+import com.sisifo.twitter_rest_client.exceptions.SisifoHttpErrorException;
 import com.sisifo.twitter_rest_client.utils.GetFriendsUtils;
 import com.sisifo.twitter_rest_client.utils.TokenUtils;
 import com.sisifo.twitter_rest_client.utils.TwitterToken;
@@ -10,7 +11,7 @@ import com.sisifo.twitter_rest_client.utils.TwitterToken;
 public class getFriends {
 
 	@Test
-	public void get() {
+	public void get() throws SisifoHttpErrorException, InterruptedException {
 		String consumerKey = System.getProperty("consumerKey");
 		String consumerSecret = System.getProperty("consumerSecret");
 		
@@ -18,7 +19,7 @@ public class getFriends {
 
 		Long userId = 2969945374L;
 		FriendsFileWriter w = new FriendsFileWriter();
-		GetFriendsUtils.writeFriendsToFile(userId, token.getAccess_token(), w);
+		GetFriendsUtils.writeFriendsToFile(userId, token.getAccess_token(), w, consumerKey, consumerSecret);
 		w.close();
 	}
 }

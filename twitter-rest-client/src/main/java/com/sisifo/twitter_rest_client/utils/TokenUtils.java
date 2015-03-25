@@ -38,4 +38,11 @@ public class TokenUtils {
   	  	return gson.fromJson(tokenOutput, TwitterToken.class);
 	}
 
+	public static TwitterToken obtainTokenAfterTooManyRequests(
+			String consumerKey, String consumerSecret) throws InterruptedException {
+		System.out.println("Too many requests. Waiting for 15 minutes");
+		Thread.sleep(900000);
+		return obtainToken(consumerKey, consumerSecret);
+	}
+
 }

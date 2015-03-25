@@ -24,19 +24,21 @@ public class searchTweets {
 		TwitterToken token = TokenUtils.obtainToken(consumerKey, consumerSecret);
 		
 		String query = "@ahorapodemos";
+		// minimum date
+		Calendar cal = new GregorianCalendar();
+		cal.set(2015, Calendar.MARCH, 16, 0, 0, 0);
+		
 		
 		try {
-			// minimum date
-			Calendar cal = new GregorianCalendar();
-			cal.set(2015, Calendar.MARCH, 16, 0, 0, 0);
-			
-			Set<Long> users = SearchTweetsUtils.writeTweetsToFile(query, token.getAccess_token(), null, cal.getTime());
+			Set<Long> users = SearchTweetsUtils.writeTweetsToFile(query, token.getAccess_token(), cal.getTime(),
+					consumerKey, consumerSecret);
 			System.out.println("Writing friends (" + users.size() + ")....");
 			FriendsFileWriter w = new FriendsFileWriter(query);
 			int i = 1;
 			for (Long userId : users) {
-				GetFriendsUtils.writeFriendsToFile(userId, token.getAccess_token(), w);
-				if (i++ % 500 == 0) {
+				GetFriendsUtils.writeFriendsToFile(userId, token.getAccess_token(), w,
+						consumerKey, consumerSecret);
+				if (i++ % 100 == 0) {
 					System.out.println(i + " friends written");					
 				}
 			}
@@ -44,6 +46,8 @@ public class searchTweets {
 			w.close();
 		} catch (SisifoHttpErrorException e) {
 			Assert.fail("Connection error " + e.getMessage());
+		} catch (InterruptedException e) {
+			Assert.fail("Interrupted exception " + e.getMessage());
 		}
   	  	
 		return;

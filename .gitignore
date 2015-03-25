@@ -1,4 +1,11 @@
 target/
+twitter-data-collection/friends*.csv
+twitter-data-collection/tweetHashtags*.csv
+twitter-data-collection/tweetUrls*.csv
+twitter-data-collection/tweetUserMentions*.csv
+twitter-data-collection/tweetUserUrls*.csv
+twitter-data-collection/tweetUsers*.csv
+twitter-data-collection/tweets*.csv
 twitter-spout/friends*.csv
 twitter-spout/tweetHashtags*.csv
 twitter-spout/tweetUrls*.csv
