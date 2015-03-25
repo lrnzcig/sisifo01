@@ -6,12 +6,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import com.sisifo.twitter_model.utils.FavoriteFileWriter;
 import com.sisifo.twitter_model.utils.FriendsFileWriter;
 import com.sisifo.twitter_rest_client.exceptions.SisifoHttpErrorException;
-import com.sisifo.twitter_rest_client.utils.UserInfoUtils;
 import com.sisifo.twitter_rest_client.utils.SearchTweetsUtils;
 import com.sisifo.twitter_rest_client.utils.TokenUtils;
 import com.sisifo.twitter_rest_client.utils.TwitterToken;
+import com.sisifo.twitter_rest_client.utils.UserInfoUtils;
 
 public class SearchTweetsRestApi {
 
@@ -44,7 +45,7 @@ public class SearchTweetsRestApi {
 				Set<Long> users = SearchTweetsUtils.writeTweetsToFile(query, token.getAccess_token(), minDate, consumerKey, consumerSecret);
 				
 				if (doFetchAdditionalUserInfo) {
-					fetchUserFriendList(users, allUsers, query, token, consumerKey, consumerSecret);
+					fetchUserAdditionalInfoList(users, allUsers, query, token, consumerKey, consumerSecret);
 				}
 				
 			} catch (SisifoHttpErrorException e) {
@@ -55,10 +56,11 @@ public class SearchTweetsRestApi {
 		
 	}
 
-	private static void fetchUserFriendList(Set<Long> users, Map<Long, Set<Long>> allUsers, String query,
+	private static void fetchUserAdditionalInfoList(Set<Long> users, Map<Long, Set<Long>> allUsers, String query,
 			TwitterToken token, String consumerKey, String consumerSecret) throws SisifoHttpErrorException, InterruptedException {
-		System.out.println("Writing users' friends lists (" + users.size() + ")....");
+		System.out.println("Writing users' additional info (" + users.size() + ")....");
 		FriendsFileWriter w = new FriendsFileWriter(query);
+		FavoriteFileWriter favw = new FavoriteFileWriter(query);
 		int total = 1;
 		int friendsSkipped = 0;
 		for (Long userId : users) {
@@ -70,12 +72,14 @@ public class SearchTweetsRestApi {
 				continue;
 			}
 			Set<Long> friends = UserInfoUtils.writeFriendsToFile(userId, token.getAccess_token(), w, consumerKey, consumerSecret);
+			UserInfoUtils.writeFavoritesToFile(userId, token.getAccess_token(), favw, consumerKey, consumerSecret);
 			allUsers.put(userId, friends);
 			if (total++ % 100 == 0) {
-				System.out.println(total + " users' friends lists written (" + friendsSkipped + " skipped)");					
+				System.out.println(total + " users' additional info written (" + friendsSkipped + " skipped)");					
 			}
 		}
-		System.out.println("Ended writing users' friends lists! (query=" + query + ")");
+		System.out.println("Ended writing users' additional info! (query=" + query + ")");
 		w.close();	// this is for the query only
+		favw.close();
 	}
 }
