@@ -2,7 +2,8 @@ package com.sisifo.rest;
 
 import org.junit.Test;
 
-import com.sisifo.streaming.GetFriendsThread;
+import com.sisifo.streaming.UserInfoThread;
+import com.sisifo.twitter_model.utils.FavoriteFileWriter;
 import com.sisifo.twitter_model.utils.FriendsFileWriter;
 
 public class GetFriendsThreadTest {
@@ -14,8 +15,9 @@ public class GetFriendsThreadTest {
 				
 
 		FriendsFileWriter fw = new FriendsFileWriter("streaming");
-		GetFriendsThread thread = new GetFriendsThread();
-		thread.startup(fw, consumerKey, consumerSecret);
+		FavoriteFileWriter favw = new FavoriteFileWriter("streaming");
+		UserInfoThread thread = new UserInfoThread();
+		thread.startup(fw, favw, consumerKey, consumerSecret);
 		thread.start();
 
 		thread.addUserId((long) 1716506203);
@@ -24,7 +26,7 @@ public class GetFriendsThreadTest {
 		boolean firstTime = true;
 		while (thread.isAlive()) {
 			Thread.sleep(1000);
-			if (GetFriendsThread.Status.IDDLE.equals(thread.getStatus())) {
+			if (UserInfoThread.Status.IDDLE.equals(thread.getStatus())) {
 				if (firstTime) {
 					// add a user which has been already processed, do nothing
 					thread.addUserId((long) 1716506203);

@@ -10,7 +10,6 @@ import java.util.List;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
-import org.apache.commons.csv.QuoteMode;
 
 import com.sisifo.twitter_model.tweet.JsonTweetEntity;
 import com.sisifo.twitter_model.tweet.JsonTweetHashtag;
@@ -23,22 +22,12 @@ public class TweetFileWriter {
 
 
 	private CSVFormat csvFormat;
-	
+
 	private static final String TWEET_FILE_DEFAULT_NAME = "tweets";
-	private static final Object[] TWEET_HEADER = {"created_at",
-		"favorite_count",
-		"id",
-		"in_reply_to_status_id",
-		"in_reply_to_user_id",
-		"place_full_name",
-		"retweet_count",
-		"retweeted",
-		"retweeted_id",
-		"text",
-		"truncated",
-		"user_id"};
+	// see also @TweetWriterUtils
 	private FileWriter tweetFileWriter;
 	private CSVPrinter tweetCsvPrinter;
+
 
 	private static final String TWEET_USER_FILE_DEFAULT_NAME = "tweetUsers";
 	private static final Object[] TWEET_USER_HEADER = {"contributors_enabled",
@@ -97,38 +86,38 @@ public class TweetFileWriter {
 	
 	public TweetFileWriter(String query) {
 		super();
-		csvFormat = CSVFormat.DEFAULT.withDelimiter(';').withQuote('\'').withQuoteMode(QuoteMode.NON_NUMERIC);
+		csvFormat = WriterUtils.getCSVFormat();
 		createFiles(query);
 	}
 
 	private void createFiles(String fileSuffix) {
 		try {
-			String fileName = addSuffixAndExtension(TWEET_FILE_DEFAULT_NAME, fileSuffix);
+			String fileName = WriterUtils.addSuffixAndExtension(TWEET_FILE_DEFAULT_NAME, fileSuffix);
 			tweetFileWriter = new FileWriter(fileName);
 	    	tweetCsvPrinter = new CSVPrinter(tweetFileWriter, csvFormat);
-	    	tweetCsvPrinter.printRecord(TWEET_HEADER);
+	    	tweetCsvPrinter.printRecord(TweetWriterUtils.TWEET_HEADER);
 	    	
-	    	fileName = addSuffixAndExtension(TWEET_USER_FILE_DEFAULT_NAME, fileSuffix);
+	    	fileName = WriterUtils.addSuffixAndExtension(TWEET_USER_FILE_DEFAULT_NAME, fileSuffix);
 	    	tweetUserFileWriter = new FileWriter(fileName);
 	    	tweetUserCsvPrinter = new CSVPrinter(tweetUserFileWriter, csvFormat);
 	    	tweetUserCsvPrinter.printRecord(TWEET_USER_HEADER);
 
-	    	fileName = addSuffixAndExtension(TWEET_HASHTAG_FILE_DEFAULT_NAME, fileSuffix);
+	    	fileName = WriterUtils.addSuffixAndExtension(TWEET_HASHTAG_FILE_DEFAULT_NAME, fileSuffix);
 	    	tweetHashtagFileWriter = new FileWriter(fileName);
 	    	tweetHashtagCsvPrinter = new CSVPrinter(tweetHashtagFileWriter, csvFormat);
 	    	tweetHashtagCsvPrinter.printRecord(TWEET_HASHTAG_HEADER);
 
-	    	fileName = addSuffixAndExtension(TWEET_URL_FILE_DEFAULT_NAME, fileSuffix);
+	    	fileName = WriterUtils.addSuffixAndExtension(TWEET_URL_FILE_DEFAULT_NAME, fileSuffix);
 	    	tweetUrlFileWriter = new FileWriter(fileName);
 	    	tweetUrlCsvPrinter = new CSVPrinter(tweetUrlFileWriter, csvFormat);
 	    	tweetUrlCsvPrinter.printRecord(TWEET_URL_HEADER);
 
-	    	fileName = addSuffixAndExtension(TWEET_USER_MENTION_FILE_DEFAULT_NAME, fileSuffix);
+	    	fileName = WriterUtils.addSuffixAndExtension(TWEET_USER_MENTION_FILE_DEFAULT_NAME, fileSuffix);
 	    	tweetUserMentionFileWriter = new FileWriter(fileName);
 	    	tweetUserMentionCsvPrinter = new CSVPrinter(tweetUserMentionFileWriter, csvFormat);
 	    	tweetUserMentionCsvPrinter.printRecord(TWEET_USER_MENTION_HEADER);
 
-	    	fileName = addSuffixAndExtension(TWEET_USER_URL_FILE_DEFAULT_NAME, fileSuffix);
+	    	fileName = WriterUtils.addSuffixAndExtension(TWEET_USER_URL_FILE_DEFAULT_NAME, fileSuffix);
 	    	tweetUserUrlFileWriter = new FileWriter(fileName);
 	    	tweetUserUrlCsvPrinter = new CSVPrinter(tweetUserUrlFileWriter, csvFormat);
 	    	tweetUserUrlCsvPrinter.printRecord(TWEET_USER_URL_HEADER);
@@ -137,15 +126,6 @@ public class TweetFileWriter {
 		}		
 	}
 	
-	private String addSuffixAndExtension(String defaultName,
-			String fileSuffix) {
-		String fileName = defaultName;
-		if (fileSuffix != null) {
-			fileName += fileSuffix.replaceAll("[^a-zA-Z0-9]+","_");
-		}
-		return fileName + ".csv";
-	}
-
 	private List<List<Object>> getTweetHashtagRecords(Tweet tweet) {
 		JsonTweetEntity entities = tweet.getEntities();
 		if (entities == null 
@@ -240,7 +220,7 @@ public class TweetFileWriter {
 
 	public void writeToFile(Tweet tweet) {
 		try {
-			List<Object> recordTweet = getTweetRecord(tweet);
+			List<Object> recordTweet = TweetWriterUtils.getTweetRecord(tweet);
 			tweetCsvPrinter.printRecord(recordTweet);
 			List<Object> recordTweetUser = getTweetUserRecord(tweet);
 			tweetUserCsvPrinter.printRecord(recordTweetUser);
@@ -275,23 +255,6 @@ public class TweetFileWriter {
 			// ignore this tweet
 			// TODO improve this!
 		}
-	}
-
-	private List<Object> getTweetRecord(Tweet tweet) {
-		List<Object> record = new ArrayList<Object>();
-		record.add(tweet.getCreated_at());
-		record.add(tweet.getFavorite_count());
-		record.add(tweet.getId());
-		record.add(tweet.getIn_reply_to_status_id());
-		record.add(tweet.getIn_reply_to_user_id());
-		record.add(tweet.getPlace_full_name());
-		record.add(tweet.getRetweet_count());
-		record.add(tweet.getRetweeted());
-		record.add(tweet.getRetweeted_id());
-		record.add(tweet.getText());
-		record.add(tweet.getTruncated());
-		record.add(tweet.getUser_id());
-		return record;
 	}
 
 	public void close() {

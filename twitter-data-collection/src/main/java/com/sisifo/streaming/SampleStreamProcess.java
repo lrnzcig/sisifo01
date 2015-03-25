@@ -22,6 +22,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.sisifo.twitter_model.tweet.Tweet;
 import com.sisifo.twitter_model.tweet.TweetInstanceCreator;
+import com.sisifo.twitter_model.utils.FavoriteFileWriter;
 import com.sisifo.twitter_model.utils.FriendsFileWriter;
 import com.sisifo.twitter_model.utils.TweetFileWriter;
 import com.sisifo.twitter_rest_client.utils.CommonTwitterUtils;
@@ -102,8 +103,9 @@ public class SampleStreamProcess {
 
 		TweetFileWriter w = new TweetFileWriter("streaming");
 		FriendsFileWriter fw = new FriendsFileWriter("streaming");
-		GetFriendsThread thread = new GetFriendsThread();
-		thread.startup(fw, consumerKey, consumerSecret);
+		FavoriteFileWriter favw = new FavoriteFileWriter("streaming");
+		UserInfoThread thread = new UserInfoThread();
+		thread.startup(fw, favw, consumerKey, consumerSecret);
 		thread.start();
 
 		for (int msgRead = 0; msgRead < MAX_NUMBER_OF_MESSAGES; msgRead++) {
@@ -127,7 +129,7 @@ public class SampleStreamProcess {
 				Tweet tweet = gson.fromJson(msg, Tweet.class);
 				// write CSV
 				w.writeToFile(tweet);
-				getUserFriends(tweet, fw, thread);
+				getUserAdditionalInfo(tweet, thread);
 			}
 		}
 
@@ -138,8 +140,7 @@ public class SampleStreamProcess {
 		System.out.printf("The client read %d messages!\n", client.getStatsTracker().getNumMessages());
 	}
 
-	private static void getUserFriends(Tweet tweet, FriendsFileWriter fw,
-			GetFriendsThread thread) {
+	private static void getUserAdditionalInfo(Tweet tweet, UserInfoThread thread) {
 		if (tweet.getUser() == null) {
 			// TODO ?????
 			// reject the tweet ?

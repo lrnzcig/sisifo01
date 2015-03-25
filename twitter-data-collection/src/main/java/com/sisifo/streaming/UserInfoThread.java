@@ -3,24 +3,27 @@ package com.sisifo.streaming;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.sisifo.twitter_model.utils.FavoriteFileWriter;
 import com.sisifo.twitter_model.utils.FriendsFileWriter;
 import com.sisifo.twitter_rest_client.exceptions.SisifoHttpErrorException;
-import com.sisifo.twitter_rest_client.utils.GetFriendsUtils;
 import com.sisifo.twitter_rest_client.utils.TokenUtils;
 import com.sisifo.twitter_rest_client.utils.TwitterToken;
+import com.sisifo.twitter_rest_client.utils.UserInfoUtils;
 
-public class GetFriendsThread extends Thread {
+public class UserInfoThread extends Thread {
 	
 	private Set<Long> userIds = new HashSet<>();
 	private Set<Long> processedUserIds = new HashSet<>();
-	private FriendsFileWriter fw;
+	private FriendsFileWriter friew;
+	private FavoriteFileWriter favw;
 	private String consumerKey;
 	private String consumerSecret;
 	private Exception e = null;
 	private boolean running;
 	
-	public void startup(FriendsFileWriter fw, String consumerKey, String consumerSecret) {
-		this.fw = fw;
+	public void startup(FriendsFileWriter fw, FavoriteFileWriter favw, String consumerKey, String consumerSecret) {
+		this.friew = fw;
+		this.favw = favw;
 		this.consumerKey = consumerKey;
 		this.consumerSecret = consumerSecret;
 		this.running = false;
@@ -37,7 +40,8 @@ public class GetFriendsThread extends Thread {
 			Long userId = getNextUserToBeProcessed();
 			if (userId != null) {
 				try {
-					GetFriendsUtils.writeFriendsToFile(userId, token.getAccess_token(), fw, consumerKey, consumerSecret);
+					UserInfoUtils.writeFriendsToFile(userId, token.getAccess_token(), friew, consumerKey, consumerSecret);
+					UserInfoUtils.writeFavoritesToFile(userId, token.getAccess_token(), favw, consumerKey, consumerSecret);
 				} catch (SisifoHttpErrorException e) {
 					e.printStackTrace();
 					this.e = e;
@@ -49,7 +53,7 @@ public class GetFriendsThread extends Thread {
 				}
 				processedUserIds.add(userId);
 				if (++total % 100 == 0) {
-					fw.flush();
+					friew.flush();
 					System.out.println("Wrote " + total + " users' friends lists.");
 				}
 			} else {

@@ -8,7 +8,6 @@ import java.util.Set;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
-import org.apache.commons.csv.QuoteMode;
 
 public class FriendsFileWriter {
 
@@ -28,13 +27,13 @@ public class FriendsFileWriter {
 	
 	public FriendsFileWriter(String query) {
 		super();
-		csvFormat = CSVFormat.DEFAULT.withDelimiter(';').withQuote('\'').withQuoteMode(QuoteMode.NON_NUMERIC);
+		csvFormat = WriterUtils.getCSVFormat();
 		createFiles(query);
 	}
 
 	private void createFiles(String fileSuffix) {
 		try {
-			String fileName = addSuffixAndExtension(FRIENDS_FILE_DEFAULT_NAME, fileSuffix);
+			String fileName = WriterUtils.addSuffixAndExtension(FRIENDS_FILE_DEFAULT_NAME, fileSuffix);
 			friendsFileWriter = new FileWriter(fileName);
 			friendsCsvPrinter = new CSVPrinter(friendsFileWriter, csvFormat);
 	    	friendsCsvPrinter.printRecord(FRIENDS_HEADER);
@@ -44,14 +43,6 @@ public class FriendsFileWriter {
 		}		
 	}
 	
-	private String addSuffixAndExtension(String defaultName,
-			String fileSuffix) {
-		String fileName = defaultName;
-		if (fileSuffix != null) {
-			fileName += fileSuffix.replaceAll("[^a-zA-Z0-9]+","_");
-		}
-		return fileName + ".csv";
-	}
 
 
 	public void writeToFile(Long userId, Set<Long> ids) {

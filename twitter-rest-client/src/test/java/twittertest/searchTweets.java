@@ -9,7 +9,7 @@ import org.junit.Test;
 
 import com.sisifo.twitter_model.utils.FriendsFileWriter;
 import com.sisifo.twitter_rest_client.exceptions.SisifoHttpErrorException;
-import com.sisifo.twitter_rest_client.utils.GetFriendsUtils;
+import com.sisifo.twitter_rest_client.utils.UserInfoUtils;
 import com.sisifo.twitter_rest_client.utils.SearchTweetsUtils;
 import com.sisifo.twitter_rest_client.utils.TokenUtils;
 import com.sisifo.twitter_rest_client.utils.TwitterToken;
@@ -36,7 +36,7 @@ public class searchTweets {
 			FriendsFileWriter w = new FriendsFileWriter(query);
 			int i = 1;
 			for (Long userId : users) {
-				GetFriendsUtils.writeFriendsToFile(userId, token.getAccess_token(), w,
+				UserInfoUtils.writeFriendsToFile(userId, token.getAccess_token(), w,
 						consumerKey, consumerSecret);
 				if (i++ % 100 == 0) {
 					System.out.println(i + " friends written");					

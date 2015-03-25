@@ -8,7 +8,7 @@ import java.util.Set;
 
 import com.sisifo.twitter_model.utils.FriendsFileWriter;
 import com.sisifo.twitter_rest_client.exceptions.SisifoHttpErrorException;
-import com.sisifo.twitter_rest_client.utils.GetFriendsUtils;
+import com.sisifo.twitter_rest_client.utils.UserInfoUtils;
 import com.sisifo.twitter_rest_client.utils.SearchTweetsUtils;
 import com.sisifo.twitter_rest_client.utils.TokenUtils;
 import com.sisifo.twitter_rest_client.utils.TwitterToken;
@@ -69,7 +69,7 @@ public class SearchTweetsRestApi {
 				friendsSkipped++;
 				continue;
 			}
-			Set<Long> friends = GetFriendsUtils.writeFriendsToFile(userId, token.getAccess_token(), w, consumerKey, consumerSecret);
+			Set<Long> friends = UserInfoUtils.writeFriendsToFile(userId, token.getAccess_token(), w, consumerKey, consumerSecret);
 			allUsers.put(userId, friends);
 			if (total++ % 100 == 0) {
 				System.out.println(total + " users' friends lists written (" + friendsSkipped + " skipped)");					
