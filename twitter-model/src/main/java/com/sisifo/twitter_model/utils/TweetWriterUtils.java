@@ -31,7 +31,7 @@ public class TweetWriterUtils {
 		record.add(tweet.getRetweet_count());
 		record.add(tweet.getRetweeted());
 		record.add(tweet.getRetweeted_id());
-		record.add(tweet.getText());
+		record.add(tweet.getTextCleanedUp());
 		record.add(tweet.getTruncated());
 		record.add(tweet.getUser_id());
 		return record;

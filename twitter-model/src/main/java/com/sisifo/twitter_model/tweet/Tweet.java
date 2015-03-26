@@ -151,5 +151,19 @@ public class Tweet {
 		this.entities = entities;
 	}
 
+	/**
+	 * Cleanup carriage returns inside text field
+	 * 
+	 * Assumed they dont have much semantic sense...
+	 * 
+	 * @return
+	 */
+	public Object getTextCleanedUp() {
+		if (text == null) {
+			return null;
+		}
+		return text.replaceAll("\n", "");
+	}
+
 	
 }
