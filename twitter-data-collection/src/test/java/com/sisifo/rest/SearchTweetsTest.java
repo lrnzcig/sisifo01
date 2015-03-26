@@ -10,7 +10,7 @@ import junit.framework.Assert;
 
 import org.junit.Test;
 
-public class SearchTweetsAndFriendsTest {
+public class SearchTweetsTest {
 	
 	@Test
 	public void searchTweets() {		

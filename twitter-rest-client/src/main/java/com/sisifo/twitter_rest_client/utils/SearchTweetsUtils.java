@@ -42,7 +42,12 @@ public class SearchTweetsUtils {
 		
 		// 1st access, no max_id
 		Tweet lastTweet = getTweets(query, token, client, w, outputUserIds, null, consumerKey, consumerSecret);
-		
+
+		if (lastTweet == null) {
+			System.out.println("No tweets for " + query);
+			w.close();
+			return null;
+		}
 		boolean lastRequestPending = true;
 		for (int i = 1; (i <= SEARCH_TWEETS_MAX_NUMBER_OF_REQUESTS || minDate != null); i++) {		
 			// check min Date
