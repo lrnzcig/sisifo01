@@ -1,5 +1,5 @@
 create table tweet (
-  created_at TIMESTAMP,
+  created_at DATE,
   favorite_count INTEGER,
   id INTEGER not null,
   in_reply_to_status_id	INTEGER,
@@ -16,7 +16,7 @@ create table tweet (
 
 create table tuser (
   contributors_enabled CHAR(1),
-  created_at TIMESTAMP,
+  created_at DATE,
   description	VARCHAR(1024),
   favourites_count INTEGER,
   followers_count INTEGER,
@@ -94,6 +94,7 @@ select * from tusermention;
 select BOOLEAN2CHAR('true') from dual;
 select CLEANUP('a') from dual;
 select regexp_replace('0', '[^09]', '') from dual;
+-- drop table tweet;
 -- delete from tweet;
 -- delete from thashtag;
 -- delete from tusermention;
