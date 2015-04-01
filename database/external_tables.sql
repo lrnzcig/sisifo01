@@ -120,6 +120,8 @@ where rowid not in (select max(rowid) keep (DENSE_RANK first order by statuses_c
 
 alter table tuser enable constraint tuser_pk;
 
+select count(*) from tuser;
+-- select * from tuser;
 -- delete from tuser;
 
 insert into tuser

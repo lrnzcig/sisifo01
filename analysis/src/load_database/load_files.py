@@ -102,6 +102,7 @@ class Test(unittest.TestCase):
         path = '/Users/lorenzorubio/Documents/datascience/sisifo01/restapi1/'
         cleanup_oracle_log_files(path)
         load_files(path, conn)
+        conn.close()
         pass
 
 

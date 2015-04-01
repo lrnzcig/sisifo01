@@ -105,7 +105,8 @@ class User_load(Abstract_load):
         else:
             Abstract_load.generic_query(self, """
                 delete from tuser
-                where rowid not in (select max(rowid) keep (DENSE_RANK first order by statuses_count desc) from tuser group by id)
+                where rowid in (select rowid from tuser
+                                 minus select  max(rowid) keep (DENSE_RANK first order by statuses_count) from tuser group by id)
             """, do_commit=True)
         # enable pk
         Abstract_load.generic_query(self, "alter table tuser enable constraint tuser_pk")
