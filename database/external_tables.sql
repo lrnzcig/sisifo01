@@ -87,7 +87,7 @@ reject limit unlimited;
 -- drop table tuser_load
 -- select * from tuser_load
 
-alter table tuser disable tuser_pk;
+alter table tuser disable constraint tuser_pk;
 
 insert into tuser
 (contributors_enabled, created_at, description, favourites_count, followers_count, 
@@ -112,9 +112,15 @@ select
   BOOLEAN2CHAR(verified),
   BOOLEAN2CHAR(withheld)
 from tuser_load
-where tuser_load.rowid in (select max(rowid) from tuser_load group by id)
+--where tuser_load.rowid in (select max(rowid) from tuser_load group by id)
 --where id in (select distinct(id) from tuser_load)
 
+delete from tuser
+where rowid not in (select max(rowid) keep (DENSE_RANK first order by statuses_count) from tuser group by id);
+
+alter table tuser enable constraint tuser_pk;
+
+-- delete from tuser;
 
 insert into tuser
 (contributors_enabled, created_at, description, 
