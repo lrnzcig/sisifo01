@@ -72,7 +72,7 @@ def load_files(path, conn):
                 et = tweet_load.Tweet_load(f, conn)
                 doLoad = True
             elif (case(type_of_file_enum.users)):
-                et = user_load.User_load(f, conn)
+                et = user_load.User_load(f, conn, fast=False)
                 doLoad = True
             elif (case(type_of_file_enum.user_mentions)):
                 et = user_mention_load.User_mention_load(f, conn)
@@ -85,6 +85,12 @@ def load_files(path, conn):
                 et.insert_into_target()
     return
 
+def cleanup_oracle_log_files(path):
+    files = os.listdir(path)
+    for f in files:
+        if f.endswith('.log') | f.endswith('.bad'):
+            os.remove(path + f)
+    
 
 class Test(unittest.TestCase):
 
@@ -93,7 +99,9 @@ class Test(unittest.TestCase):
         conn = sisifo_connection.SisifoConnection()
         manager = twitter_tables_manager.Manager(conn)
         manager.cleanup_tables()
-        load_files('/Users/lorenzorubio/Documents/datascience/sisifo01/restapi1/', conn)
+        path = '/Users/lorenzorubio/Documents/datascience/sisifo01/restapi1/'
+        cleanup_oracle_log_files(path)
+        load_files(path, conn)
         pass
 
 

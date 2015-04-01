@@ -42,11 +42,11 @@ class Abstract_load():
             #self.sconnection.get().commit()
             return
         
-    def insert_into_target(self):
-        Abstract_load.generic_query(self, self.insert_select_query)
+    def insert_into_target(self, do_commit=True):
+        Abstract_load.generic_query(self, self.insert_select_query, do_commit)
         return
 
-    def generic_query(self, query):
+    def generic_query(self, query, do_commit=True):
         cur = self.sconnection.get().cursor()
         try:
             cur.execute(query)
@@ -55,7 +55,8 @@ class Abstract_load():
             self.sconnection.get().rollback()
             raise RuntimeError(error)
         else:
-            self.sconnection.get().commit()
+            if (do_commit == True):
+                self.sconnection.get().commit()
             return
         
         

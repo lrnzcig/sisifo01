@@ -72,15 +72,16 @@ class User_load(Abstract_load):
         BOOLEAN2CHAR(verified),
         BOOLEAN2CHAR(withheld)
     from tuser_load
-    where rowid in (select max(rowid) from tuser_load group by id)
     '''
 
-    def __init__(self, filename, connection):
+    def __init__(self, filename, connection, fast=False):
         '''
         Constructor
+        if fast is True, it does not guarantee to select the last register for the user (not such a big deal anyway, pending of ddbb optimization)
         '''
         Abstract_load.__init__(self, connection)
         self.filename = filename
+        self.fast = fast
         
     def recreate_external_table(self):
         # change file name in definition
@@ -94,12 +95,18 @@ class User_load(Abstract_load):
         # avoid duplicates: disable pk
         Abstract_load.generic_query(self, "alter table tuser disable constraint tuser_pk")
         # insert-select
-        Abstract_load.insert_into_target(self)
+        Abstract_load.insert_into_target(self, do_commit=False)
         # remove duplicates
-        Abstract_load.generic_query(self, """
-            delete from tuser
-            where rowid not in (select max(rowid) keep (DENSE_RANK first order by statuses_count desc) from tuser group by id)
-        """)
+        if (self.fast == True):
+            Abstract_load.generic_query(self, """
+                delete from tuser
+                where rowid not in (select max(rowid) from tuser group by id)
+            """, do_commit=True)
+        else:
+            Abstract_load.generic_query(self, """
+                delete from tuser
+                where rowid not in (select max(rowid) keep (DENSE_RANK first order by statuses_count desc) from tuser group by id)
+            """, do_commit=True)
         # enable pk
         Abstract_load.generic_query(self, "alter table tuser enable constraint tuser_pk")
         
