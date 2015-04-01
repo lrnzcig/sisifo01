@@ -23,3 +23,4 @@ twitter-rest-client/tweetUsers*.csv
 twitter-rest-client/tweets*.csv
 twitter-rest-client/favorite*.csv
 ~$schemaTwitter.xlsx
+*.pyc

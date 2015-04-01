@@ -1,5 +1,5 @@
 -- drop directory load_dir;
--- create directory load_dir as '?/media/sf_sisifo01/restapi1'; -- does not work!
+-- create directory load_dir as '/media/sf_sisifo01/restapi1'; -- does not work!
 -- create directory load_dir as '/home/oracle/Desktop/restapi1';
 
 create table tweet_load (
@@ -87,11 +87,13 @@ reject limit unlimited;
 -- drop table tuser_load
 -- select * from tuser_load
 
+alter table tuser disable tuser_pk;
+
 insert into tuser
 (contributors_enabled, created_at, description, favourites_count, followers_count, 
   -- friends_count,
   id, is_translator, listed_count, location, name, protected, screen_name, statuses_count, url, verified, withheld)
-select distinct
+select
   BOOLEAN2CHAR(contributors_enabled),
   to_timestamp_tz(created_at, 'DY MON DD HH24:MI:SS TZHTZM YYYY', 'NLS_DATE_LANGUAGE = AMERICAN') AT time zone 'CET',
   description,
@@ -110,7 +112,40 @@ select distinct
   BOOLEAN2CHAR(verified),
   BOOLEAN2CHAR(withheld)
 from tuser_load
-where id in (select distinct(id) from tuser_load)
+where tuser_load.rowid in (select max(rowid) from tuser_load group by id)
+--where id in (select distinct(id) from tuser_load)
+
+
+insert into tuser
+(contributors_enabled, created_at, description, 
+  -- favourites_count, followers_count, 
+  -- friends_count,
+  id, is_translator, 
+  -- listed_count,
+  location, name, protected, screen_name, 
+  -- statuses_count,
+  url, verified, withheld)
+select distinct 
+  BOOLEAN2CHAR(contributors_enabled),
+  to_timestamp_tz(created_at, 'DY MON DD HH24:MI:SS TZHTZM YYYY', 'NLS_DATE_LANGUAGE = AMERICAN') AT time zone 'CET',
+  description,
+  --favourites_count,
+  --followers_count,
+  --friends_count,
+  id,
+  BOOLEAN2CHAR(is_translator),
+  --listed_count,
+  location,
+  name,
+  BOOLEAN2CHAR(protected),
+  screen_name,
+  --statuses_count,
+  url,
+  BOOLEAN2CHAR(verified),
+  BOOLEAN2CHAR(withheld)
+from tuser_load
+
+-- delete from tuser
 
 select distinct * from tuser_load
 where id = '193796539'

@@ -95,6 +95,7 @@ select BOOLEAN2CHAR('true') from dual;
 select CLEANUP('a') from dual;
 select regexp_replace('0', '[^09]', '') from dual;
 -- drop table tweet;
+-- drop table tuser;
 -- delete from tweet;
 -- delete from thashtag;
 -- delete from tusermention;

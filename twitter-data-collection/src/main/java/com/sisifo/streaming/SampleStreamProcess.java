@@ -101,9 +101,9 @@ public class SampleStreamProcess {
 		// Establish a connection
 		client.connect();
 
-		TweetFileWriter w = new TweetFileWriter("streaming");
-		FriendsFileWriter fw = new FriendsFileWriter("streaming");
-		FavoriteFileWriter favw = new FavoriteFileWriter("streaming");
+		TweetFileWriter w = new TweetFileWriter("_streaming");
+		FriendsFileWriter fw = new FriendsFileWriter("_streaming");
+		FavoriteFileWriter favw = new FavoriteFileWriter("_streaming");
 		UserInfoThread thread = new UserInfoThread();
 		thread.startup(fw, favw, consumerKey, consumerSecret);
 		thread.start();
