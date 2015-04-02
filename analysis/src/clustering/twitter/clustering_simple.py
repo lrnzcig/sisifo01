@@ -3,6 +3,7 @@ Created on 20/3/2015
 
 @author: lorenzorubio
 '''
+# -*- coding: utf-8 -*-
 import unittest
 from time import time
 import cx_Oracle
@@ -18,102 +19,204 @@ from sklearn.preprocessing import scale
 
 from database import sisifo_connection
 
-def clustering(self):
-    conn = sisifo_connection.SisifoConnection().get()
-    # user list
+user_id_feature_name = 'USER_ID'
+screen_name_feature_name = 'SCREEN_NAME'
+
+def init_users_dataframe(conn, verbose=True):
     users = pd.read_sql("select id, screen_name from tuser", conn, index_col='ID')
-    print(users.shape)
+    if (verbose == True):
+        print("# users to analyse: " + str(users[screen_name_feature_name].size))
+    return users
+
+
+def get_column_for_follows(user_screen_name, feature_sufix):
+    return 'FOLLOWS' + feature_sufix
+    
+def followers_stats(df, user_screen_name, feature_sufix):
+    dataframe_column_for_follows = get_column_for_follows(user_screen_name, feature_sufix)
+    print("==> followers of @" + user_screen_name)
+    print("number of users following     : " + str(df.loc[df[dataframe_column_for_follows] != 1, dataframe_column_for_follows].count()))
+    print("number of users not following : " + str(df.loc[df[dataframe_column_for_follows] == 1, dataframe_column_for_follows].count()))
+
+def get_column_for_retweets(user_screen_name, feature_sufix):
+    return 'RETWEETS' + feature_sufix
+    
+def retweets_stats(df, user_screen_name, feature_sufix):
+    dataframe_column_for_retweets = get_column_for_retweets(user_screen_name, feature_sufix)
+    print("==> retweets of @" + user_screen_name)
+    print("number of users with retweets : " + str(df.loc[df[dataframe_column_for_retweets] != 1, dataframe_column_for_retweets].count()))
+    print("number of users w no retweets : " + str(df.loc[df[dataframe_column_for_retweets] == 1, dataframe_column_for_retweets].count()))
+
+def get_column_for_mentions(user_screen_name, feature_sufix):
+    return 'MENTIONS' + feature_sufix
+    
+def mentions_stats(df, user_screen_name, feature_sufix):
+    dataframe_column_for_mentions = get_column_for_mentions(user_screen_name, feature_sufix)
+    print("==> mentions of @" + user_screen_name)
+    print("number of users with mentions : " + str(df.loc[df[dataframe_column_for_mentions] != 1, dataframe_column_for_mentions].count()))
+    print("number of users w no mentions : " + str(df.loc[df[dataframe_column_for_mentions] == 1, dataframe_column_for_mentions].count()))
+
+
+def prepare_features_for_user(user_screen_name, conn, feature_sufix, users, verbose=True):
+    '''
+    Calculates features for one user and adds them to dataframe users
+    Input:
+        user_screen_name
+        conn: connection to database (cx_Oracle object)
+        users: dataframe with ID = user_id
+        verbose: if True shows messages
+    Output:
+        users: dataframe with added features
+    '''
+    # user list
     # add feature "follows"
-    q = """
-    select user_id as USER_ID, 0 as FOLLOWS
+    followers_query = """
+    select user_id as {user_id_feature_name}, 0 as {dataframe_column_for_follows}
     from follower
     where followed_user_id = (select id
     from tuser
-    where screen_name = 'ahorapodemos')
+    where screen_name = '{user_screen_name}')
     """
-    follows = pd.read_sql(q, conn, index_col='USER_ID')
+    dataframe_column_for_follows = get_column_for_follows(user_screen_name, feature_sufix)
+    q = followers_query.format(
+        user_screen_name = user_screen_name,
+        user_id_feature_name = user_id_feature_name,
+        dataframe_column_for_follows = dataframe_column_for_follows
+    )
+    follows = pd.read_sql(q, conn, index_col=user_id_feature_name)
     #print(follows.shape)
     users = users.join(follows)
     #print(follows[follows['FOLLOWS'] == 0].shape)
-    print(users.shape)
+    #print(users)
+    
     # query informs '0' when the user is following, but NaN when it is not
-    users['FOLLOWS'].fillna(value=1, inplace=True)
-    print("==> number of users not following")
-    print(users[users['FOLLOWS'] == 1]['FOLLOWS'].count())
-    print(follows['FOLLOWS'].count())
-
+    users[dataframe_column_for_follows].fillna(value=1, inplace=True)
+    if (verbose == True):
+        followers_stats(users, user_screen_name, feature_sufix)
+        
     # add feature "retweets"
-    q = """
-    select user_id as USER_ID, 1/(count(*) + 1) as RETWEETS
+    retweets_query = """
+    select user_id as {user_id_feature_name}, 1/(count(*) + 1) as {dataframe_column_for_retweets}
     from tweet
-    where text like 'RT @ahorapodemos%'
+    where text like 'RT @{user_screen_name}%'
     group by user_id
     """
-    retweets = pd.read_sql(q, conn, index_col='USER_ID')
+    dataframe_column_for_retweets = get_column_for_retweets(user_screen_name, feature_sufix)    
+    q = retweets_query.format(
+        user_screen_name = user_screen_name,
+        user_id_feature_name = user_id_feature_name,
+        dataframe_column_for_retweets = dataframe_column_for_retweets        
+    )
+    retweets = pd.read_sql(q, conn, index_col=user_id_feature_name)
     #print(retweets.shape)
     users = users.join(retweets)
-    print(users.shape)
+    #print(users.shape)
 
     # query informs '1/(count(*) + 1)' when there is at least 1 retweet, but NaN when there is no retweet
-    users['RETWEETS'].fillna(value=1, inplace=True)
-    print("==> number of users with no retweets")
-    print(users[users['RETWEETS'] == 1]['RETWEETS'].count())
-    print(retweets['RETWEETS'].count())
+    users[dataframe_column_for_retweets].fillna(value=1, inplace=True)
+    if (verbose == True):
+        retweets_stats(users, user_screen_name, feature_sufix)
     
     # add feature "usermentions"
-    q = """
-    select source_user_id as USER_ID, 1/(count(*) + 1) as MENTIONS
+    mentions_query = """
+    select source_user_id as {user_id_feature_name}, 1/(count(*) + 1) as {dataframe_column_for_mentions}
     from tusermention
     where target_user_id = (select id
     from tuser
-    where screen_name = 'ahorapodemos')
+    where screen_name = '{user_screen_name}')
     group by source_user_id
     """
-    mentions = pd.read_sql(q, conn, index_col='USER_ID')
+    dataframe_column_for_mentions = get_column_for_mentions(user_screen_name, feature_sufix)    
+    q = mentions_query.format(
+        user_screen_name = user_screen_name,
+        user_id_feature_name = user_id_feature_name,
+        dataframe_column_for_mentions = dataframe_column_for_mentions        
+    )
+    mentions = pd.read_sql(q, conn, index_col=user_id_feature_name)
     #print(mentions.shape)
     users = users.join(mentions)
-    print(users.shape)
+    #print(users.shape)
 
     # query informs '1/(count(*) + 1)' when there is at least 1 mention, but NaN when there is no mention
-    users['MENTIONS'].fillna(value=1, inplace=True)
-    print("==> number of users with no mentions")
-    print(users[users['MENTIONS'] == 1]['MENTIONS'].count())
-    print(mentions['MENTIONS'].count())
+    users[dataframe_column_for_mentions].fillna(value=1, inplace=True)
+    if (verbose == True):
+        mentions_stats(users, user_screen_name, feature_sufix)
+        
+    # put the ref user in coordinates (0, 0)
+    for column in users.columns:
+        if (column != screen_name_feature_name):
+            users.loc[users[screen_name_feature_name] == user_screen_name, column] = 0
     
-    simpleKMeansPlot(users, False)
+    #print(users)
+    #print(users[users[screen_name_feature_name] == user_screen_name])
+    return users
+
+def cluster_stats(df, label, users, verbose=False):
+    '''
+    Shows statistics
+    - df: dataframe containing the cluster
+    - label
+    - users: list of reference users
+    '''
+    print('=======================================')
+    print('==> gropup label ' + label)
+    print('size: ' + str(df[screen_name_feature_name].size))
+    for user_screen_name in users:
+        if (find_user_in_df(df, user_screen_name) != 0):
+            print('includes reference users: ' + user_screen_name)
+        feature_sufix = "_" + user_screen_name.upper()
+        followers_stats(df, user_screen_name, feature_sufix)
+        retweets_stats(df, user_screen_name, feature_sufix)
+        mentions_stats(df, user_screen_name, feature_sufix)
+        dataframe_column_for_follows = get_column_for_follows(user_screen_name, feature_sufix)
+        if (df.loc[df[dataframe_column_for_follows] == 0, dataframe_column_for_follows].count() > 0):
+            print('members following @' + user_screen_name + ': ')
+            print(df.loc[df[dataframe_column_for_follows] == 0, screen_name_feature_name].tolist())
+    if (verbose == True):      
+        print('members indexes: ')
+        print(df.index.values.tolist())
+        print('members screen names:')
+        print(df[screen_name_feature_name].tolist())
+    print('=======================================')
+
+def find_user_in_df(df, user_screen_name):
+    return len(df.loc[df[screen_name_feature_name] == user_screen_name, screen_name_feature_name])
+
+def clustering(users):
+    '''
+    Input
+        users: list of users' screen_name of interest
+    '''
+    conn = sisifo_connection.SisifoConnection().get()
     
+    users_df = init_users_dataframe(conn, True)
+    for user_screen_name in users:
+        users_df = prepare_features_for_user(user_screen_name, conn, "_" + user_screen_name.upper(), users_df, True)
+     
+    # kmeans 2 clusters random initial
+    #print(users.iloc[:,1:])
+    kmeans_model = KMeans(n_clusters=2, random_state=1).fit(users_df.iloc[:, 1:])
+    labels = kmeans_model.labels_
+    users_df['label'] = labels
+
+
     # tweets of users of each label
-    users0 = users[users['label'] == 0]
-    print(users0.shape)
-    print(users0[users0['FOLLOWS'] == 1]['SCREEN_NAME'].count())
-    print(users0[users0['RETWEETS'] == 1]['SCREEN_NAME'].count())
-    print(users0[users0['MENTIONS'] == 1]['SCREEN_NAME'].count())
-    list0 = users0.index.values.tolist()
-    print(list0)
-    print(users0.index.values.shape)
+    users0 = users_df[users_df['label'] == 0]
+    cluster_stats(users0, '0', users)
+
+    users1 = users_df[users_df['label'] == 1]
+    cluster_stats(users1, '1', users)
     
-    # TODO: 1) más estadísticas (2) colocar @ahora podemos en el 0 (3) comprobar más textos (4) comprobar usuarios conocidos
+    # TODO: 
+    # (1) more (meaningful) graphs 
+    # (2) check more results manually
     
-    users1 = users[users['label'] == 1]
-    print(users1.shape)
-    print(users1[users1['FOLLOWS'] == 1]['SCREEN_NAME'].count())
-    print(users1[users1['RETWEETS'] == 1]['SCREEN_NAME'].count())
-    print(users1[users1['MENTIONS'] == 1]['SCREEN_NAME'].count())
-    list1 = users1.index.values.tolist()
-    print(list1)
-    print(users1.index.values.shape)
-    
+    simpleKMeansPlot(users_df, False)    
     #colorKMeansPlot(users.iloc[:, 1:], 2, 3)
     
     return
 
 def simpleKMeansPlot(users, doPlot):
-    # kmeans 2 clusters random initial
-    #print(users.iloc[:,1:])
-    kmeans_model = KMeans(n_clusters=2, random_state=1).fit(users.iloc[:, 1:])
-    labels = kmeans_model.labels_
-    users['label'] = labels
-
     if (doPlot == True):
         # simple plot
         pca_2 = PCA(2)
@@ -209,7 +312,7 @@ class Test(unittest.TestCase):
 
 
     def testCluster(self):
-        clustering(self)
+        clustering(['ahorapodemos'])
         pass
 
 
