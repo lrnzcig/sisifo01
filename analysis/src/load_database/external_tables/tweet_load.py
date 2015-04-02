@@ -68,15 +68,12 @@ class Tweet_load(Abstract_load):
         
     def recreate_external_table(self):
         # change file name in definition
-        self.external_table_definition_query = Tweet_load.external_table_definition_preformatted.format(
+        self.external_table_definition_query = self.external_table_definition_preformatted.format(
             external_table_filename = self.filename
         )
         #print(q)
-        Abstract_load.recreate_external_table_abstract(self)
-        
-    def insert_into_target(self):
-        Abstract_load.insert_into_target(self)
-            
+        self.recreate_external_table_abstract()
+                
         
         
         

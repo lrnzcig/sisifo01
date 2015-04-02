@@ -7,7 +7,7 @@ import unittest
 import os
 from database import sisifo_connection
 from load_database.definitions import type_of_file_enum
-from load_database.external_tables import (tweet_load, user_load, user_mention_load, user_friend_load)
+from load_database.external_tables import (tweet_load, user_load, user_mention_load, user_friend_load, load_dir_manager)
 from load_database.twitter_tables import manager as twitter_tables_manager
 
 # http://code.activestate.com/recipes/410692/
@@ -96,12 +96,24 @@ class Test(unittest.TestCase):
 
 
     def testLoadFiles(self):
+        # get connection
         conn = sisifo_connection.SisifoConnection()
+        # clean target tables
         manager = twitter_tables_manager.Manager(conn)
         manager.cleanup_tables()
-        path = '/Users/lorenzorubio/Documents/datascience/sisifo01/restapi1/'
+        
+        # TODO should be @ config.properties, should be a list of directories
+        path = '/Users/lorenzorubio/Documents/datascience/sisifo01/restapi2/'
+        # cleanup log files in the directory
         cleanup_oracle_log_files(path)
+        # recreate oracle's object for directory
+        load_dir_m = load_dir_manager.Load_dir(path, conn)
+        load_dir_m.drop()
+        load_dir_m.create()
+        
+        # and finally, load files
         load_files(path, conn)
+        
         conn.close()
         pass
 

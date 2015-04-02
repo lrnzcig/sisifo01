@@ -85,31 +85,31 @@ class User_load(Abstract_load):
         
     def recreate_external_table(self):
         # change file name in definition
-        self.external_table_definition_query = User_load.external_table_definition_preformatted.format(
+        self.external_table_definition_query = self.external_table_definition_preformatted.format(
             external_table_filename = self.filename
         )
         #print(q)
-        Abstract_load.recreate_external_table_abstract(self)
+        self.recreate_external_table_abstract()
         
     def insert_into_target(self):
         # avoid duplicates: disable pk
-        Abstract_load.generic_query(self, "alter table tuser disable constraint tuser_pk")
+        self.generic_query("alter table tuser disable constraint tuser_pk", do_commit=False)
         # insert-select
         Abstract_load.insert_into_target(self, do_commit=False)
         # remove duplicates
         if (self.fast == True):
-            Abstract_load.generic_query(self, """
+            self.generic_query("""
                 delete from tuser
                 where rowid not in (select max(rowid) from tuser group by id)
             """, do_commit=True)
         else:
-            Abstract_load.generic_query(self, """
+            self.generic_query("""
                 delete from tuser
                 where rowid in (select rowid from tuser
-                                 minus select  max(rowid) keep (DENSE_RANK first order by statuses_count) from tuser group by id)
+                                 minus select  max(rowid) keep (DENSE_RANK first order by statuses_count desc) from tuser group by id)
             """, do_commit=True)
         # enable pk
-        Abstract_load.generic_query(self, "alter table tuser enable constraint tuser_pk")
+        self.generic_query("alter table tuser enable constraint tuser_pk", do_commit=False)
         
             
         

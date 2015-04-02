@@ -1,0 +1,43 @@
+===================
+python load files
+===================
+==> loading from several directories
+- keeping a external table per directory
+
+==> tables missing
+- hashtags, favorites, …
+
+==> upgrades
+- calculate retweets before analyzing (columns retweeted and retweeted_id)
+- external tables using minus
+- implement start_date and end_date of follower
+
+==> refactoring
+- directory path in config.properties
+- launch from a process (now is unit test)
+
+===================
+python analysis
+===================
+==> upgrades
+- graphs
+- nl
+- refactoring for clustering
+
+===================
+java collect process
+===================
+==> only streaming can be launched from process/mvn 
+- rest api has to be launched with junit
+- in particular, background process fetching slow rate user parameters
+
+
+===================
+database
+===================
+==> missing
+- table for favorites
+
+
+==> to be reviewed
+- datatypes

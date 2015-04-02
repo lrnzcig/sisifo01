@@ -46,15 +46,25 @@ class User_mention_load(Abstract_load):
         
     def recreate_external_table(self):
         # change file name in definition
-        self.external_table_definition_query = User_mention_load.external_table_definition_preformatted.format(
+        self.external_table_definition_query = self.external_table_definition_preformatted.format(
             external_table_filename = self.filename
         )
         #print(q)
-        Abstract_load.recreate_external_table_abstract(self)
-        
+        self.recreate_external_table_abstract()
+    
     def insert_into_target(self):
-        Abstract_load.insert_into_target(self)
-            
+        # avoid duplicates: disable pk
+        self.generic_query("alter table tusermention disable constraint tusermention_pk", do_commit=False)
+        # insert-select
+        Abstract_load.insert_into_target(self, do_commit=False)
+        # remove duplicates
+        self.generic_query("""
+                delete from follower
+                where rowid not in (select max(rowid) from follower group by tweet_id, source_user_id, target_user_id)
+            """, do_commit=True)
+        # enable pk
+        self.generic_query("alter table tusermention enable constraint tusermention_pk", do_commit=False)
+
         
         
         
