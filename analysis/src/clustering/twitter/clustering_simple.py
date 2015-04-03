@@ -4,9 +4,7 @@ Created on 20/3/2015
 @author: lorenzorubio
 '''
 # -*- coding: utf-8 -*-
-import unittest
 from time import time
-import cx_Oracle
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,7 +21,7 @@ user_id_feature_name = 'USER_ID'
 screen_name_feature_name = 'SCREEN_NAME'
 
 def init_users_dataframe(conn, verbose=True):
-    users = pd.read_sql("select id, screen_name from tuser", conn, index_col='ID')
+    users = pd.read_sql("select id as ID, upper(screen_name) as SCREEN_NAME from tuser", conn, index_col='ID')
     if (verbose == True):
         print("# users to analyse: " + str(users[screen_name_feature_name].size))
     return users
@@ -32,29 +30,38 @@ def init_users_dataframe(conn, verbose=True):
 def get_column_for_follows(user_screen_name, feature_sufix):
     return 'FOLLOWS' + feature_sufix
     
-def followers_stats(df, user_screen_name, feature_sufix):
+def followers_stats(df, user_screen_name, feature_sufix, summary=True):
     dataframe_column_for_follows = get_column_for_follows(user_screen_name, feature_sufix)
+    if (summary == True) & (df.loc[df[dataframe_column_for_follows] != 1, dataframe_column_for_follows].count() == 0):
+        return
     print("==> followers of @" + user_screen_name)
     print("number of users following     : " + str(df.loc[df[dataframe_column_for_follows] != 1, dataframe_column_for_follows].count()))
-    print("number of users not following : " + str(df.loc[df[dataframe_column_for_follows] == 1, dataframe_column_for_follows].count()))
+    if (summary == False):
+        print("number of users not following : " + str(df.loc[df[dataframe_column_for_follows] == 1, dataframe_column_for_follows].count()))
 
 def get_column_for_retweets(user_screen_name, feature_sufix):
     return 'RETWEETS' + feature_sufix
     
-def retweets_stats(df, user_screen_name, feature_sufix):
+def retweets_stats(df, user_screen_name, feature_sufix, summary=True):
     dataframe_column_for_retweets = get_column_for_retweets(user_screen_name, feature_sufix)
+    if (summary == True) & (df.loc[df[dataframe_column_for_retweets] != 1, dataframe_column_for_retweets].count() == 0):
+        return
     print("==> retweets of @" + user_screen_name)
     print("number of users with retweets : " + str(df.loc[df[dataframe_column_for_retweets] != 1, dataframe_column_for_retweets].count()))
-    print("number of users w no retweets : " + str(df.loc[df[dataframe_column_for_retweets] == 1, dataframe_column_for_retweets].count()))
+    if (summary == False):
+        print("number of users w no retweets : " + str(df.loc[df[dataframe_column_for_retweets] == 1, dataframe_column_for_retweets].count()))
 
 def get_column_for_mentions(user_screen_name, feature_sufix):
     return 'MENTIONS' + feature_sufix
     
-def mentions_stats(df, user_screen_name, feature_sufix):
+def mentions_stats(df, user_screen_name, feature_sufix, summary=True):
     dataframe_column_for_mentions = get_column_for_mentions(user_screen_name, feature_sufix)
+    if (summary == True) & (df.loc[df[dataframe_column_for_mentions] != 1, dataframe_column_for_mentions].count() == 0):
+        return
     print("==> mentions of @" + user_screen_name)
     print("number of users with mentions : " + str(df.loc[df[dataframe_column_for_mentions] != 1, dataframe_column_for_mentions].count()))
-    print("number of users w no mentions : " + str(df.loc[df[dataframe_column_for_mentions] == 1, dataframe_column_for_mentions].count()))
+    if (summary == False):
+        print("number of users w no mentions : " + str(df.loc[df[dataframe_column_for_mentions] == 1, dataframe_column_for_mentions].count()))
 
 
 def prepare_features_for_user(user_screen_name, conn, feature_sufix, users, verbose=True):
@@ -75,7 +82,7 @@ def prepare_features_for_user(user_screen_name, conn, feature_sufix, users, verb
     from follower
     where followed_user_id = (select id
     from tuser
-    where screen_name = '{user_screen_name}')
+    where upper(screen_name) = upper('{user_screen_name}'))
     """
     dataframe_column_for_follows = get_column_for_follows(user_screen_name, feature_sufix)
     q = followers_query.format(
@@ -98,7 +105,7 @@ def prepare_features_for_user(user_screen_name, conn, feature_sufix, users, verb
     retweets_query = """
     select user_id as {user_id_feature_name}, 1/(count(*) + 1) as {dataframe_column_for_retweets}
     from tweet
-    where text like 'RT @{user_screen_name}%'
+    where upper(text) like upper('RT @{user_screen_name}%')
     group by user_id
     """
     dataframe_column_for_retweets = get_column_for_retweets(user_screen_name, feature_sufix)    
@@ -123,7 +130,7 @@ def prepare_features_for_user(user_screen_name, conn, feature_sufix, users, verb
     from tusermention
     where target_user_id = (select id
     from tuser
-    where screen_name = '{user_screen_name}')
+    where upper(screen_name) = upper('{user_screen_name}'))
     group by source_user_id
     """
     dataframe_column_for_mentions = get_column_for_mentions(user_screen_name, feature_sufix)    
@@ -161,28 +168,62 @@ def cluster_stats(df, label, users, verbose=False):
     print('=======================================')
     print('==> gropup label ' + label)
     print('size: ' + str(df[screen_name_feature_name].size))
+    ref_users_included = []
+    followers_of_ref_users = set()
     for user_screen_name in users:
         if (find_user_in_df(df, user_screen_name) != 0):
+            ref_users_included.append(user_screen_name)
             print('includes reference users: ' + user_screen_name)
-        feature_sufix = "_" + user_screen_name.upper()
-        followers_stats(df, user_screen_name, feature_sufix)
-        retweets_stats(df, user_screen_name, feature_sufix)
-        mentions_stats(df, user_screen_name, feature_sufix)
-        dataframe_column_for_follows = get_column_for_follows(user_screen_name, feature_sufix)
-        if (df.loc[df[dataframe_column_for_follows] == 0, dataframe_column_for_follows].count() > 0):
-            print('members following @' + user_screen_name + ': ')
-            print(df.loc[df[dataframe_column_for_follows] == 0, screen_name_feature_name].tolist())
-    if (verbose == True):      
-        print('members indexes: ')
-        print(df.index.values.tolist())
-        print('members screen names:')
-        print(df[screen_name_feature_name].tolist())
+    for ref_user in ref_users_included:
+        if (there_are_followers(df, ref_user)):
+            print('members following @' + ref_user + ': ')
+            followers = get_followers(df,ref_user)
+            followers_of_ref_users.update(followers.tolist())
+            print(followers.tolist())
+    for user in set(users) - set(ref_users_included):
+        if (there_are_followers(df, user)):
+            followers = get_followers(df,user)
+            followers_removing_ref = set(followers.tolist()) - followers_of_ref_users
+            if (len(followers_removing_ref) > 0):     
+                print('members following @' + user + ' (and not following references): ')
+                print(followers_removing_ref)
+            
+            
+    if (verbose == True):
+        for user_screen_name in users:
+            feature_sufix = "_" + user_screen_name.upper()
+            followers_stats(df, user_screen_name, feature_sufix)
+            retweets_stats(df, user_screen_name, feature_sufix)
+            mentions_stats(df, user_screen_name, feature_sufix)
+            dataframe_column_for_follows = get_column_for_follows(user_screen_name, feature_sufix)
+            if (df.loc[df[dataframe_column_for_follows] == 0, dataframe_column_for_follows].count() > 0):
+                print('members following @' + user_screen_name + ': ')
+                print(df.loc[df[dataframe_column_for_follows] == 0, screen_name_feature_name].tolist())
+            '''
+            can't see anything on these, better out to csv
+            print('members indexes: ')
+            print(df.index.values.tolist())
+            print('members screen names:')
+            print(df[screen_name_feature_name].tolist())
+            '''
     print('=======================================')
 
-def find_user_in_df(df, user_screen_name):
-    return len(df.loc[df[screen_name_feature_name] == user_screen_name, screen_name_feature_name])
+def there_are_followers(df, user_screen_name):
+    if (get_followers(df, user_screen_name).count() > 0):
+        return True
+    return False
 
-def clustering(users):
+def get_followers(df, user_screen_name):
+    feature_sufix = "_" + user_screen_name.upper()
+    dataframe_column_for_follows = get_column_for_follows(user_screen_name, feature_sufix)
+    return df.loc[df[dataframe_column_for_follows] == 0, screen_name_feature_name]
+    
+    
+
+def find_user_in_df(df, user_screen_name):
+    return len(df.loc[df[screen_name_feature_name] == user_screen_name.upper(), screen_name_feature_name])
+
+def clustering(users, number_of_clusters=2):
     '''
     Input
         users: list of users' screen_name of interest
@@ -191,21 +232,19 @@ def clustering(users):
     
     users_df = init_users_dataframe(conn, True)
     for user_screen_name in users:
-        users_df = prepare_features_for_user(user_screen_name, conn, "_" + user_screen_name.upper(), users_df, True)
+        users_df = prepare_features_for_user(user_screen_name, conn, "_" + user_screen_name.upper(), users_df, False)
      
     # kmeans 2 clusters random initial
     #print(users.iloc[:,1:])
-    kmeans_model = KMeans(n_clusters=2, random_state=1).fit(users_df.iloc[:, 1:])
+    kmeans_model = KMeans(n_clusters=number_of_clusters, random_state=1).fit(users_df.iloc[:, 1:])
     labels = kmeans_model.labels_
     users_df['label'] = labels
 
 
     # tweets of users of each label
-    users0 = users_df[users_df['label'] == 0]
-    cluster_stats(users0, '0', users)
+    for i in range(number_of_clusters):
+        cluster_stats(users_df[users_df['label'] == i], str(i), users)
 
-    users1 = users_df[users_df['label'] == 1]
-    cluster_stats(users1, '1', users)
     
     # TODO: 
     # (1) more (meaningful) graphs 
@@ -308,14 +347,3 @@ def bench_k_means(estimator, name, data, labels, sample_size):
     return
 
 
-class Test(unittest.TestCase):
-
-
-    def testCluster(self):
-        clustering(['ahorapodemos'])
-        pass
-
-
-if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testCluster']
-    unittest.main()
