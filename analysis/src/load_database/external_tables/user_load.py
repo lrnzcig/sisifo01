@@ -71,7 +71,13 @@ class User_load(Abstract_load):
         url,
         BOOLEAN2CHAR(verified),
         BOOLEAN2CHAR(withheld)
-    from tuser_load
+    from(
+        select
+        tuser_load.*,
+        row_number() over (partition by id order by statuses_count desc) ri
+        from tuser_load
+        )
+    where ri=1
     '''
 
     def __init__(self, filename, connection, fast=False):

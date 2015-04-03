@@ -51,7 +51,7 @@ class User_friend_load(Abstract_load):
         )
         #print(q)
         self.recreate_external_table_abstract()
-        
+    
     def insert_into_target(self):
         # avoid duplicates: disable pk
         self.generic_query("alter table follower disable constraint follower_pk", do_commit=False)
@@ -60,11 +60,12 @@ class User_friend_load(Abstract_load):
         # remove duplicates
         self.generic_query("""
                 delete from follower
-                where rowid not in (select max(rowid) from follower group by user_id, followed_user_id)
+                where rowid in (
+                    select rowid from follower
+                    minus select max(rowid) from follower group by user_id, followed_user_id)
             """, do_commit=True)
         # enable pk
         self.generic_query("alter table follower enable constraint follower_pk", do_commit=False)
-            
         
         
         

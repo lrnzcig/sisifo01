@@ -59,8 +59,10 @@ class User_mention_load(Abstract_load):
         Abstract_load.insert_into_target(self, do_commit=False)
         # remove duplicates
         self.generic_query("""
-                delete from follower
-                where rowid not in (select max(rowid) from follower group by tweet_id, source_user_id, target_user_id)
+                delete from tusermention
+                where rowid in (
+                    select rowid from tusermention
+                    minus select max(rowid) from tusermention group by tweet_id, source_user_id, target_user_id)
             """, do_commit=True)
         # enable pk
         self.generic_query("alter table tusermention enable constraint tusermention_pk", do_commit=False)

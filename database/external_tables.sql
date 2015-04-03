@@ -182,3 +182,9 @@ order by id;
 select * from tweet;
 -- delete from tweet
 -- delete from tuser
+
+
+
+select distinct tweet_id, source_user_id, target_user_id from tusermention_load
+where (tweet_id, source_user_id, target_user_id)
+not in (select distinct tweet_id, source_user_id, target_user_id from tusermention)

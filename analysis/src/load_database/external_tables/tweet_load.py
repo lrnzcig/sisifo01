@@ -73,7 +73,20 @@ class Tweet_load(Abstract_load):
         )
         #print(q)
         self.recreate_external_table_abstract()
-                
+
+    def insert_into_target(self):
+        # avoid duplicates: disable pk
+        self.generic_query("alter table tweet disable constraint tweet_pk", do_commit=False)
+        # insert-select
+        Abstract_load.insert_into_target(self, do_commit=False)
+        # remove duplicates
+        self.generic_query("""
+                delete from tweet
+                where rowid in (select rowid from tweet
+                                minus select max(rowid) keep (DENSE_RANK first order by retweet_count desc) from tweet group by id)
+            """, do_commit=True)
+        # enable pk
+        self.generic_query("alter table tusermention enable constraint tusermention_pk", do_commit=False)                
         
         
         

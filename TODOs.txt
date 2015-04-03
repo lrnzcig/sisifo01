@@ -8,8 +8,10 @@ python load files
 - hashtags, favorites, …
 
 ==> upgrades
+- when loading from several files, oracle is overwriting the log files
+- log files from oracle should be also analyzed
 - calculate retweets before analyzing (columns retweeted and retweeted_id)
-- external tables using minus
+- better way to avoid duplicates
 - implement start_date and end_date of follower
 
 ==> refactoring
