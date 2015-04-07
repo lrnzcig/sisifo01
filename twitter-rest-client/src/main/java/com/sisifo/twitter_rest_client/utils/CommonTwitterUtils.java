@@ -14,6 +14,7 @@ public class CommonTwitterUtils {
 	public static final String LANGUAGE = "es";
 	// Sun Mar 15 23:59:39 +0000 2015
 	public static final DateFormat dateFormat = new SimpleDateFormat("EEE MMM dd HH:mm:ss ZZZZZ yyyy", Locale.ENGLISH);
+	public static final DateFormat queryDateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
 	public static Collection<Long> getUserIds(Tweet[] statuses) {
 		Set<Long> output = new HashSet<Long>();

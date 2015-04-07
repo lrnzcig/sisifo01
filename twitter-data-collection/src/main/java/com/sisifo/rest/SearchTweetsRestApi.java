@@ -25,11 +25,12 @@ public class SearchTweetsRestApi {
 	 *		Date minDate = cal.getTime();
 	 * 
 	 * @param queries e.g. "@ahorapodemos"
-	 * @param minDate
+	 * @param minDate can be null
+	 * @param maxDate can be null, only date, no time!!! Besides, depending on how many tweets the user has, it may simply not work
 	 * @param doFetchAdditionalUserInfo if active, get additional user info from REST API - this is very slow due to rate restrictions, around 15 queries every 15 minutes
 	 * @throws InterruptedException
 	 */
-	public static void run(Collection<String> queries, Date minDate, boolean doFetchAdditionalUserInfo) throws InterruptedException {
+	public static void run(Collection<String> queries, Date minDate, Date maxDate, boolean doFetchAdditionalUserInfo) throws InterruptedException {
 
 		String consumerKey = System.getProperty("consumerKey");
 		String consumerSecret = System.getProperty("consumerSecret");
@@ -42,7 +43,7 @@ public class SearchTweetsRestApi {
 				TwitterToken token = TokenUtils.obtainToken(consumerKey, consumerSecret);
 
 				System.out.println("Search tweets for query " + query + "....");
-				Set<Long> users = SearchTweetsUtils.writeTweetsToFile(query, token.getAccess_token(), minDate, consumerKey, consumerSecret);
+				Set<Long> users = SearchTweetsUtils.writeTweetsToFile(query, token.getAccess_token(), minDate, maxDate, consumerKey, consumerSecret);
 				
 				if (doFetchAdditionalUserInfo) {
 					fetchUserAdditionalInfoList(users, allUsers, query, token, consumerKey, consumerSecret);

@@ -14,8 +14,8 @@ public class GetFriendsThreadTest {
 		String consumerSecret = System.getProperty("consumerSecret");
 				
 
-		FriendsFileWriter fw = new FriendsFileWriter("streaming");
-		FavoriteFileWriter favw = new FavoriteFileWriter("streaming");
+		FriendsFileWriter fw = new FriendsFileWriter("_streaming");
+		FavoriteFileWriter favw = new FavoriteFileWriter("_streaming");
 		UserInfoThread thread = new UserInfoThread();
 		thread.startup(fw, favw, consumerKey, consumerSecret);
 		thread.start();

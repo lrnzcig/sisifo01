@@ -82,7 +82,7 @@ public class SampleStreamProcess {
 			+ "@maria_hb18,@TuCaraMSuena,@LaSextaAsiNosVa,@cookpadrecetas,@michaelrobinson,@Santi_Millan,@AS_Futbol,@elEconomistaes,@susannagriso,"
 			+ "@elpais_cultura,@AthleticClub,@lamacope,@davidguapo,@cuore,@gizmodoES,@JmCalderon3,@PipiEstrada1,@eljueves,@museodelprado"
 			// hasta aquí, top 250 menos @_anapastor_, @iescolar, @ahorapodemos, @marianorajoy, y @Pablo_Iglesias_
-			+ "@ahorapodemos,@pablo_iglesias,@ciudadanoscs,@albert_rivera,@ppopular,@marianorajoy,"
+			+ "@ahorapodemos,@pablo_iglesias_,@ciudadanoscs,@albert_rivera,@ppopular,@marianorajoy,"
 			+ "@psoe,@sanchezcastejon,@upyd,@rosadiezupyd,@_anapastor_,@iescolar,@pedroj_ramirez,@abarceloh25,@ccarnicero,"
 			+ "@melchormiralles,@garcia_abadillo,@pacomarhuenda,@fgarea,@montsehuffpost,@carloscuestaem,@alfonsomerlos,"
 			+ "@oneto_p,@antonio_cano,@bieitorubido,@psebastianbueno"));
