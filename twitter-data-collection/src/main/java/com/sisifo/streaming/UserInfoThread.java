@@ -1,5 +1,9 @@
 package com.sisifo.streaming;
 
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -14,12 +18,14 @@ public class UserInfoThread extends Thread {
 	
 	private Set<Long> userIds = new HashSet<>();
 	private Set<Long> processedUserIds = new HashSet<>();
+	private Set<Long> errorUserIds = new HashSet<>();
 	private FriendsFileWriter friew;
 	private FavoriteFileWriter favw;
 	private String consumerKey;
 	private String consumerSecret;
 	private Exception e = null;
 	private boolean running;
+	private int initialTotal = 0;
 	
 	public void startup(FriendsFileWriter fw, FavoriteFileWriter favw, String consumerKey, String consumerSecret) {
 		this.friew = fw;
@@ -28,6 +34,13 @@ public class UserInfoThread extends Thread {
 		this.consumerSecret = consumerSecret;
 		this.running = false;
 	}
+	
+	public void setInitialTotal(int newTotal) {
+		if (running) {
+			System.out.println("Too late to setup initial total. Already started!");
+		}
+		this.initialTotal = newTotal;
+	}
 
 	@Override
 	public void run() {
@@ -35,30 +48,43 @@ public class UserInfoThread extends Thread {
 		// first token
 		TwitterToken token = TokenUtils.obtainToken(consumerKey, consumerSecret);
 		// until externally stopped
-		int total = 0;
+		int total = this.initialTotal;
+		System.out.println("Thread started, looking for users' friends/favorites lists.");
 		while (true) {
 			Long userId = getNextUserToBeProcessed();
 			if (userId != null) {
+				BufferedWriter writer = null;
 				try {
 					UserInfoUtils.writeFriendsToFile(userId, token.getAccess_token(), friew, consumerKey, consumerSecret);
 					UserInfoUtils.writeFavoritesToFile(userId, token.getAccess_token(), favw, consumerKey, consumerSecret);
+					writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("last_user.txt")));
+					writer.write(userId.toString());
 				} catch (SisifoHttpErrorException e) {
 					e.printStackTrace();
 					this.e = e;
+					System.out.println("(Exception) Wrote " + total + " users' friends/favorites lists." + " User id: " + userId + " (added to errors)");
+					errorUserIds.add(userId);
 					return;
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 					this.e = e;
 					return;
+				} catch (IOException e) {
+					e.printStackTrace();
+					this.e = e;
+					return;
+				} finally {
+					try {writer.close();} catch (Exception ex) {}
 				}
 				processedUserIds.add(userId);
-				if (++total % 100 == 0) {
+				if (++total % 50 == 0) {
 					friew.flush();
-					System.out.println("Wrote " + total + " users' friends lists.");
+					System.out.println("Wrote " + total + " users' friends/favorites lists.");
 				}
 			} else {
 				// wait for more friends to be added to the wanted list
 				try {
+					System.out.println("Thread iddle.");
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {
 					switch (getStatus()) {
@@ -111,6 +137,21 @@ public class UserInfoThread extends Thread {
 			return Status.IDDLE;
 		}
 		return Status.USERS_PENDING;
+	}
+
+	public Set<Long> getRemainingUsers() {
+		Set<Long> output = new HashSet<>();
+		for (Long userId : userIds) {
+			if ((! processedUserIds.contains(userId)) 
+					&& (! errorUserIds.contains(userId))) {
+				output.add(userId);
+			}
+		}
+		return output;
+	}
+
+	public void setUsers(Set<Long> users) {
+		userIds = users;
 	}
 
 

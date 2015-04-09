@@ -25,3 +25,5 @@ twitter-rest-client/favorite*.csv
 ~$schemaTwitter.xlsx
 *.pyc
 clustering_launcher.py
+analysis/src/clustering/twitter/users.csv
+twitter-data-collection/last_user.txt

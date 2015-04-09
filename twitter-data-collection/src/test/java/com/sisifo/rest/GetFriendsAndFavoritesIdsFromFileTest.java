@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -26,10 +27,12 @@ public class GetFriendsAndFavoritesIdsFromFileTest {
 		thread.startup(fw, favw, consumerKey, consumerSecret);
 		thread.start();
 
+		int totalUsers = 0;
 		try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
 		    String line;
 		    while ((line = br.readLine()) != null) {
 		    	thread.addUserId(Long.valueOf(line));
+		    	totalUsers++;
 		    }
 		}
 		
@@ -38,6 +41,15 @@ public class GetFriendsAndFavoritesIdsFromFileTest {
 			if (UserInfoThread.Status.IDDLE.equals(thread.getStatus())) {
 				thread.interrupt();
 				break;
+			}
+			if (UserInfoThread.Status.EXCEPTION.equals(thread.getStatus())) {
+				Set<Long> remainingUsers = thread.getRemainingUsers();
+				thread.interrupt();
+				thread = new UserInfoThread();
+				thread.startup(fw, favw, consumerKey, consumerSecret);
+				thread.setInitialTotal(totalUsers - remainingUsers.size());
+				thread.start();
+				thread.setUsers(remainingUsers);
 			}
 		}
 		Thread.sleep(1000);
