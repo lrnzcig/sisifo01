@@ -16,7 +16,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import scale
 
 from database import sisifo_connection
-from dump import dump_tweets
+from schema_aux import list_of_user_clustering
 from clustering.twitter import utils
 
 class Clustering():
@@ -61,7 +61,7 @@ class Clustering():
     
         # tweets of users of each label
         for i in range(self.number_of_clusters):
-            self.cluster_stats(self.users[self.users['label'] == i], str(i), writeFiles=writeFiles)
+            self.cluster_stats(self.users[self.users['label'] == i], str(i), persist=writeFiles)
     
         
         # TODO: 
@@ -168,7 +168,7 @@ class Clustering():
         #print(users[users[screen_name_feature_name] == user_screen_name])
         return
     
-    def cluster_stats(self, df, label, verbose=True, writeFiles=True, plots=False):
+    def cluster_stats(self, df, label, verbose=True, persist=True, plots=False):
         '''
         Shows statistics
         - df: dataframe containing the cluster
@@ -224,18 +224,23 @@ class Clustering():
                 '''
         print('=======================================')
     
-        if (writeFiles == True):
+        if (persist == True):
             if (ref_users_included):
-                self.writeTextsToFile(df, label, ref_users_included)
+                self.persist_distributed_users(df, label, ref_users_included)
             else:
-                self.writeAllTextsToFile(df, label)
+                self.persist_all_of_users(df, label)
                 
     
-    def writeTextsToFile(self, df, label, cluster_ref_users):
+    def persist_distributed_users(self, df, label, cluster_ref_users):
         users_pure_set, users_white_set, users_no_set = self.distribute_users(df, cluster_ref_users)
-        dumper = dump_tweets.DumpTweets(users_pure_set, 'pure_set' + label)
-        dumper.dump()
+        dumper = list_of_user_clustering.DumpTweets(label, self.conn)
+        dumper.dump(users_pure_set, 'pure_set')
+        dumper.dump(users_white_set, 'white_set')
+        dumper.dump(users_no_set, 'no_set')
         
+    def persist_all_of_users(self, df, label):
+        dumper = list_of_user_clustering.DumpTweets(label, self.conn)
+        dumper.dump(set(df.index), 'all')
     
     def distribute_users(self, df, cluster_ref_users):
         '''
@@ -259,10 +264,7 @@ class Clustering():
                 
         users_white_set = remaining_set - users_pure_set
         return users_pure_set, users_white_set, users_no_set
-    
-    def writeAllTextsToFile(self, df, label):
-        return
-        
+            
     
     def plot_histograms(self, df, label, users):
         plt.figure(figsize=(16,9))
