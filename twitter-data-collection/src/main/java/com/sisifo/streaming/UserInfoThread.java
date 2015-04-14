@@ -16,6 +16,8 @@ import com.sisifo.twitter_rest_client.utils.UserInfoUtils;
 
 public class UserInfoThread extends Thread {
 	
+	public static final String LAST_USER_FILE_NAME = "last_user.txt";
+	
 	private Set<Long> userIds = new HashSet<>();
 	private Set<Long> processedUserIds = new HashSet<>();
 	private Set<Long> errorUserIds = new HashSet<>();
@@ -57,7 +59,7 @@ public class UserInfoThread extends Thread {
 				try {
 					UserInfoUtils.writeFriendsToFile(userId, token.getAccess_token(), friew, consumerKey, consumerSecret);
 					UserInfoUtils.writeFavoritesToFile(userId, token.getAccess_token(), favw, consumerKey, consumerSecret);
-					writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("last_user.txt")));
+					writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(LAST_USER_FILE_NAME)));
 					writer.write(userId.toString());
 				} catch (SisifoHttpErrorException e) {
 					e.printStackTrace();
@@ -152,6 +154,7 @@ public class UserInfoThread extends Thread {
 
 	public void setUsers(Set<Long> users) {
 		userIds = users;
+		System.out.println(users.size() + " users to fetch");
 	}
 
 

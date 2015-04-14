@@ -19,20 +19,49 @@ public class GetFriendsAndFavoritesIdsFromFileTest {
 		String consumerKey = System.getProperty("consumerKey");
 		String consumerSecret = System.getProperty("consumerSecret");
 		String fileName = System.getProperty("fileName");
+		
+		String recoverS = System.getProperty("recover");
+		boolean recover = false; 
+		if (recoverS != null) {
+			recover = Boolean.valueOf(recoverS);
+		}
 				
-
-		FriendsFileWriter fw = new FriendsFileWriter("_from_list");
-		FavoriteFileWriter favw = new FavoriteFileWriter("_from_list");
+		String suffix = "_from_list";
+		if (recover) {
+			suffix += System.getProperty("suffix");
+		}
+		
+		FriendsFileWriter fw = new FriendsFileWriter(suffix);
+		FavoriteFileWriter favw = new FavoriteFileWriter(suffix);
 		UserInfoThread thread = new UserInfoThread();
 		thread.startup(fw, favw, consumerKey, consumerSecret);
 		thread.start();
 
 		int totalUsers = 0;
-		try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
-		    String line;
+	    String line;
+	    boolean skip = false;
+	    Long lastUserId = null;
+	    if (recover) {
+	    	skip = true;
+    		try (BufferedReader brLastUser = new BufferedReader(new FileReader(UserInfoThread.LAST_USER_FILE_NAME))) {
+    		    while ((line = brLastUser.readLine()) != null) {
+    		    	lastUserId = Long.valueOf(line);
+    		    	break;
+    		    }
+    		}
+	    }
+
+	    try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
 		    while ((line = br.readLine()) != null) {
-		    	thread.addUserId(Long.valueOf(line));
-		    	totalUsers++;
+		    	if (skip) {
+		    		Long userId = Long.valueOf(line);
+		    		if (userId.equals(lastUserId)) {
+		    			skip = false;
+		    		}
+		    	} else {
+		    		thread.addUserId(Long.valueOf(line));
+		    		totalUsers++;
+		    	}
 		    }
 		}
 		
