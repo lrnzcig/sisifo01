@@ -28,6 +28,8 @@ class Clustering():
         self.number_of_clusters = number_of_clusters
         self.conn = sisifo_connection.SisifoConnection().get()
         self.users = self.init_users_dataframe()
+        self.dumper = list_of_user_clustering.Manager() #__init__ of dumper removes list
+
     
     def init_users_dataframe(self, verbose=True):
         '''
@@ -233,14 +235,12 @@ class Clustering():
     
     def persist_distributed_users(self, df, label, cluster_ref_users):
         users_pure_set, users_white_set, users_no_set = self.distribute_users(df, cluster_ref_users)
-        dumper = list_of_user_clustering.DumpTweets(label, self.conn)
-        dumper.dump(users_pure_set, 'pure_set')
-        dumper.dump(users_white_set, 'white_set')
-        dumper.dump(users_no_set, 'no_set')
+        self.dumper.dump(users_pure_set, label, 'pure_set')
+        self.dumper.dump(users_white_set, label, 'white_set')
+        self.dumper.dump(users_no_set, label, 'no_set')
         
     def persist_all_of_users(self, df, label):
-        dumper = list_of_user_clustering.DumpTweets(label, self.conn)
-        dumper.dump(set(df.index), 'all')
+        self.dumper.dump(set(df.index), label, 'all')
     
     def distribute_users(self, df, cluster_ref_users):
         '''
