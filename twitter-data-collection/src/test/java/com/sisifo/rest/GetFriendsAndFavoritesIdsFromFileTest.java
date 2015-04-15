@@ -4,7 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Set;
+import java.util.LinkedHashSet;
 
 import org.junit.Test;
 
@@ -72,7 +72,7 @@ public class GetFriendsAndFavoritesIdsFromFileTest {
 				break;
 			}
 			if (UserInfoThread.Status.EXCEPTION.equals(thread.getStatus())) {
-				Set<Long> remainingUsers = thread.getRemainingUsers();
+				LinkedHashSet<Long> remainingUsers = thread.getRemainingUsers();
 				thread.interrupt();
 				thread = new UserInfoThread();
 				thread.startup(fw, favw, consumerKey, consumerSecret);

@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import com.sisifo.twitter_model.utils.FavoriteFileWriter;
@@ -18,7 +19,7 @@ public class UserInfoThread extends Thread {
 	
 	public static final String LAST_USER_FILE_NAME = "last_user.txt";
 	
-	private Set<Long> userIds = new HashSet<>();
+	private LinkedHashSet<Long> userIds = new LinkedHashSet<>();
 	private Set<Long> processedUserIds = new HashSet<>();
 	private Set<Long> errorUserIds = new HashSet<>();
 	private FriendsFileWriter friew;
@@ -141,8 +142,8 @@ public class UserInfoThread extends Thread {
 		return Status.USERS_PENDING;
 	}
 
-	public Set<Long> getRemainingUsers() {
-		Set<Long> output = new HashSet<>();
+	public LinkedHashSet<Long> getRemainingUsers() {
+		LinkedHashSet<Long> output = new LinkedHashSet<>();
 		for (Long userId : userIds) {
 			if ((! processedUserIds.contains(userId)) 
 					&& (! errorUserIds.contains(userId))) {
@@ -152,7 +153,7 @@ public class UserInfoThread extends Thread {
 		return output;
 	}
 
-	public void setUsers(Set<Long> users) {
+	public void setUsers(LinkedHashSet<Long> users) {
 		userIds = users;
 		System.out.println(users.size() + " users to fetch");
 	}

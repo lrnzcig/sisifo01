@@ -7,6 +7,7 @@ twitter-data-collection/tweetUserUrls*.csv
 twitter-data-collection/tweetUsers*.csv
 twitter-data-collection/tweets*.csv
 twitter-data-collection/favorite*.csv
+twitter-data-collection/backup
 twitter-spout/friends*.csv
 twitter-spout/tweetHashtags*.csv
 twitter-spout/tweetUrls*.csv
