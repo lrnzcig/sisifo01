@@ -28,7 +28,7 @@ class Clustering():
         self.number_of_clusters = number_of_clusters
         self.conn = sisifo_connection.SisifoConnection().get()
         self.users = self.init_users_dataframe()
-        self.dumper = list_of_user_clustering.Manager() #__init__ of dumper removes list
+        self.dumper = list_of_user_clustering.Manager(delete_all_cluster_lists=True) #__init__ of dumper removes list
 
     
     def init_users_dataframe(self, verbose=True):

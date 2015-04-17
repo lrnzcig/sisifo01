@@ -27,19 +27,19 @@ class Manager():
     writes & reads list of users
     '''
 
-    def __init__(self):
+    def __init__(self, delete_all_cluster_lists=False):
         # export PATH or pass as an argument!
         properties = yaml.load(open(expanduser("~") + '/.sisifo/connection.properties'))
         database = properties['database']
         url = database['dialect'] + "://" + database['user'] + ":" + database['password'] + '@' + database['host'] + "/" + database['sid']
         self.engine = create_engine(url, echo=True)
         Base.metadata.create_all(self.engine)
-        ## delete all registers !!!
-        ## TODO should keep several clustering trials with labels for the clusters themselves
-        Session = sessionmaker(bind=self.engine)
-        session = Session()
-        session.query(ListOfUserClustering).delete()
-        session.commit()
+        if (delete_all_cluster_lists == True):
+            ## TODO should keep several clustering trials with labels for the clusters themselves
+            Session = sessionmaker(bind=self.engine)
+            session = Session()
+            session.query(ListOfUserClustering).delete()
+            session.commit()
     
     def dump(self, users_set, cluster_label, additional_label):
         Session = sessionmaker(bind=self.engine)
