@@ -3,10 +3,13 @@ Created on 14 de abr. de 2015
 
 @author: lorenzorubio
 '''
+from __future__ import division
 import unittest
 import pandas as pd
 from schema_aux import list_of_user_clustering as luc
 from schema_aux import twitter_schema as sch
+from nltk.tokenize import word_tokenize
+from nltk.probability import FreqDist
 
 def process_clusters():
     # example: get list of users 
@@ -24,6 +27,22 @@ def process_clusters():
     tweets_set_0 = pd.read_sql(q.statement, session.bind)
     print(tweets_set_0.shape)
     
+    
+    tweet1_tokens = word_tokenize(tweets_set_0.loc[1, 'text'])
+    print(sorted(set(tweet1_tokens)))
+    
+    corpus = [word for tweet in tweets_set_0.loc[:, 'text'] for word in word_tokenize(tweet)]
+    print(sorted(set(corpus)))
+    print(len(set(corpus)))
+    
+    # diversity (how many times a word is repeated on average)
+    print("diversity", len(corpus) / len(set(corpus)))
+    
+    # frequency distribution
+    fdist = FreqDist(corpus)
+    fdist.plot(50, cumulative=True)
+    
+    print(fdist['ahorapodemos'])
     return
     
 
