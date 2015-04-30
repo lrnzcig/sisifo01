@@ -3,7 +3,7 @@ Created on 15 de abr. de 2015
 
 @author: lorenzorubio
 '''
-from sqlalchemy import Column, Integer, String, Date, create_engine
+from sqlalchemy import Column, Integer, String, Date, SmallInteger, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from os.path import expanduser
@@ -22,7 +22,7 @@ class Tweet(Base):
     retweet_count = Column(Integer)
     retweeted = Column(String(1))
     retweeted_id = Column(Integer)
-    text = Column(String(256))
+    text = Column(String(512))
     truncated = Column(String(1))
     user_id = Column(Integer)
 
@@ -33,22 +33,22 @@ class Tweet(Base):
 class User(Base):
     __tablename__ = 'tuser'
     created_at = Column(Date)
-    contributors_enabled = Column(String(1))
+    contributors_enabled = Column(SmallInteger)
     description = Column(String(1024))
     favourites_count = Column(Integer)
     followers_count = Column(Integer)
     friends_count = Column(Integer)
     id = Column(Integer, primary_key=True)    
-    is_translator = Column(String(1))
+    is_translator = Column(SmallInteger)
     listed_count = Column(Integer)
     location = Column(String(256))
     name = Column(String(256))
-    protected = Column(String(1))
+    protected = Column(SmallInteger)
     screen_name = Column(String(256))
     statuses_count = Column(Integer)
     url = Column(String(1024))
-    verified = Column(String(1))
-    withheld = Column(String(1))
+    verified = Column(SmallInteger)
+    withheld = Column(SmallInteger)
 
     def __repr__(self):
         return "<Tuser(id='%s', screen_name='%s')>" % (
@@ -71,3 +71,9 @@ class Manager():
     def get_session(self):
         Session = sessionmaker(bind=self.engine)
         return Session()
+
+    def delete_all(self):
+        session = self.get_session()
+        session.query(Tweet).delete()
+        session.query(User).delete()
+        session.commit()
