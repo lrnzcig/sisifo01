@@ -43,7 +43,6 @@ def tweet_loader(path, filename):
                 # it is more recent
                 old_tweet.retweet_count = tweet[1][5]
                 old_tweet.favorite_count = tweet[1][1]
-                #sch.Tweet.invalidate(session, tweet_id=tweet_id)
             continue
         tweet = sch.Tweet.as_cached(session, created_at=created_at, favorite_count=tweet[1][1],
                           id=tweet_id, in_reply_to_status_id=tweet[1][3],
@@ -117,7 +116,6 @@ def tweet_url_loader(path, filename):
     session = manager.get_session()
     for tweeturl in tweeturls.iterrows():
         tweeturl = sch.TweetUrl.as_unique(session, tweet_id=tweeturl[1][0], url=tweeturl[1][1])
-        session.add(tweeturl)
     session.commit()  
         
 def user_mention_loader(path, filename):
@@ -129,15 +127,11 @@ def user_mention_loader(path, filename):
     session = manager.get_session()
     for usermention in usermentions.iterrows():
         tweet_id = usermention[1][0]
-        source_user_id = None
-        for row in session.query(sch.Tweet).filter(sch.Tweet.id == tweet_id).all():
-            source_user_id = row.user_id
-            break
-        if source_user_id == None:
+        old_tweet = sch.Tweet.get(session, id=tweet_id)
+        if old_tweet == None:
             raise RuntimeError("Incongruent data - there's user mentions for a tweet that does not exist. Tweet id: " + str(tweet_id))
-        usermention = sch.UserMention.as_unique(session, tweet_id=tweet_id, source_user_id=source_user_id, 
+        usermention = sch.UserMention.as_unique(session, tweet_id=tweet_id, source_user_id=old_tweet.user_id, 
                                       target_user_id=usermention[1][1])
-        session.add(usermention)
     session.commit()  
 
 def user_url_loader(path, filename):
@@ -153,7 +147,6 @@ def user_url_loader(path, filename):
     session = manager.get_session()
     for userurl in userurls.iterrows():
         userurl = sch.TweetUrl.as_unique(session, tweet_id=userurl[1][0], url=userurl[1][1])
-        session.add(userurl)
     session.commit()  
     
 class Test(unittest.TestCase):
