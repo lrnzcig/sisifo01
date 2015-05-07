@@ -24,12 +24,12 @@ public class searchTweets {
 		
 		TwitterToken token = TokenUtils.obtainToken(consumerKey, consumerSecret);
 		
-		String query = "@ahorapodemos";
+		String query = "@lrnzcig";
 		// minimum date
 		Calendar cal = new GregorianCalendar();
-		cal.set(2015, Calendar.MARCH, 16, 0, 0, 0);
+		cal.set(2015, Calendar.MAY, 1, 0, 0, 0);
 		Date minDate = cal.getTime();
-		cal.set(2015, Calendar.MARCH, 26, 0, 0, 0);
+		cal.set(2015, Calendar.MAY, 8, 0, 0, 0);
 		Date maxDate = cal.getTime();
 		
 		
