@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from schema_aux import list_of_user_clustering as luc
 from schema_aux import twitter_schema as sch
-from nltk.tokenize import word_tokenize
+from nltk.tokenize.casual import TweetTokenizer
 from nltk.probability import FreqDist
 from nltk.corpus import stopwords
 #from nltk.stem import SnowballStemmer
@@ -20,9 +20,10 @@ from time import time
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import pairwise_distances
 import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
 
-def run_clustering(X, n_clusters):
-    model = AgglomerativeClustering(n_clusters=n_clusters, linkage="ward", affinity="cosine")
+def run_clustering_model(X, n_clusters):
+    model = AgglomerativeClustering(n_clusters=n_clusters, linkage="average", affinity="cosine")
 
     print("Clustering tweet content with %s" % model)
     t0 = time()
@@ -30,6 +31,16 @@ def run_clustering(X, n_clusters):
     print("done in %0.3fs" % (time() - t0))
     print()
     return model
+
+def run_clustering(X, n_clusters):
+    model = AgglomerativeClustering(n_clusters=n_clusters, linkage="average", affinity="cosine")
+
+    print("Clustering tweet content with %s" % model)
+    t0 = time()
+    result = model.fit_predict(X)
+    print("done in %0.3fs" % (time() - t0))
+    print()
+    return result
 
 def interclass_distance_plot(Xdf, n_clusters):
     # interclass distances plot
@@ -63,20 +74,19 @@ def process_clusters():
     pure_set_0 = users.loc[users['cluster_label'] == '0'].loc[users['additional_label'] == 'pure_set']
     print(len(pure_set_0))
     
-    # example: get tweets of that pure_set
     schema_mgr = sch.Manager()
     session = schema_mgr.get_session()
+
+    # remove stopwords to fdist (it could also be done to corpus instead
+    stopwords_additional = ['@', ':', '?', '.', ',', '"', 'http', '#', '!', '!', '``', "''", "q", "d", "..."]
+
+    # example: get tweets of that pure_set
+    '''
     q = session.query(sch.Tweet).join(sch.User, sch.User.id == sch.Tweet.user_id) \
         .join(luc.ListOfUserClustering, luc.ListOfUserClustering.id == sch.User.id) \
         .filter(luc.ListOfUserClustering.cluster_label == '0').filter(luc.ListOfUserClustering.additional_label == 'pure_set')
     tweets_set_0 = pd.read_sql(q.statement, session.bind)
     print(tweets_set_0.shape)
-    
-    # all tweets
-    q = session.query(sch.Tweet)
-    all_tweets = pd.read_sql(q.statement, session.bind)
-    print(all_tweets.shape)
-    
     tweet1_tokens = word_tokenize(tweets_set_0.loc[1, 'text'])
     print(sorted(set(tweet1_tokens)))
     
@@ -92,16 +102,23 @@ def process_clusters():
     #fdist.plot(50, cumulative=True)
     
     print(fdist['ahorapodemos'])
-    
-    # remove stopwords to fdist (it could also be done to corpus instead
-    stopwords_additional = ['@', ':', '?', '.', ',', '"', 'http', '#', '!', '!', '``', "''", "q", "d", "..."]
 
     fdist_clean = [item for item in fdist.items() 
                    if item[0].lower() not in stopwords.words('spanish') and item[0].lower() not in stopwords_additional]
     
     fdist_clean_df = pd.DataFrame(fdist_clean, columns=['word', 'count'])
     fdist_clean_df.sort('count', ascending=False)[:50]
+    '''
     
+    # all tweets (depending on performance)
+    q = session.query(sch.Tweet)
+    all_tweets = pd.read_sql(q.statement, session.bind)
+    all_tweets = all_tweets.loc[:25000]
+    print(all_tweets.shape)
+    
+    
+
+    tokenizer = TweetTokenizer()
     '''
     stemmer = SnowballStemmer('spanish')
     def tokenize(text):
@@ -109,39 +126,45 @@ def process_clusters():
         return [stemmer.stem(token) for token in tokens]
         '''
     def tokenize(text):
-        return word_tokenize(text, 'spanish')
+        w_list = tokenizer.tokenize(text)
+        return [x for x in w_list if not x.startswith("http")]
 
-    vectorizer = TfidfVectorizer(tokenizer=tokenize, stop_words=stopwords.words('spanish') + stopwords_additional)
-    r_tweets_set_0 = vectorizer.fit_transform(tweets_set_0.loc[:, 'text'])
-    print(r_tweets_set_0.shape)
+    vectorizer = TfidfVectorizer(ngram_range=(1,1),
+                                 strip_accents='ascii',
+                                 norm='l2',
+                                 min_df=2, 
+                                 tokenizer=tokenize,
+                                 stop_words=stopwords.words('spanish') + stopwords_additional)
+    r_tweets = vectorizer.fit_transform(all_tweets.loc[:, 'text'])
+    print(r_tweets.shape)
 
     feature_names = vectorizer.get_feature_names()
     print(feature_names[:15])
     print(len(feature_names))
-    print(len(r_tweets_set_0.nonzero()))
+    print(len(r_tweets.nonzero()))
     '''
-    for col in r_tweets_set_0.nonzero()[1]:
+    for col in r_tweets.nonzero()[1]:
         # results is matrix with all the tweets, results[0,... gives values for tweet0
-        print(feature_names[col], ' - ', r_tweets_set_0[0, col])
+        print(feature_names[col], ' - ', r_tweets[0, col])
         return
         '''
     
-    print(type(r_tweets_set_0))
+    print(type(r_tweets))
     # not good for performance; output of vectorizer is scipy.sparse.csr_matrix (compressed)
     # could be converted to pd.SparseDataFrame
     
     '''
-    X = r_tweets_set_0.toarray()
-    print(r_tweets_set_0[:10])
+    X = r_tweets.toarray()
+    print(r_tweets[:10])
     print(X[:10])
     '''
 
-
-    r_all_tweets = vectorizer.fit_transform(all_tweets.loc[:25000, 'text'])
-    print("all tweeets shape ", r_all_tweets.shape)
     
-    X = r_all_tweets.toarray()
-    print(r_all_tweets[:10])
+    '''
+    create a dataframe Xdf for both the vectors and the results of the clustering
+    '''
+    X = r_tweets.toarray()
+    print(r_tweets[:10])
     print(X[:10])
     
     Xdf = pd.SparseDataFrame(X)
@@ -151,13 +174,18 @@ def process_clusters():
     #                              for i in np.arange(results_corpus.shape[0]) ])
     print(Xdf.shape)
     
-    models = []
+    '''
+    reduce dimensions (how many?)
+    '''
+    reducer = PCA(n_components=333)
+    reduced_X = reducer.fit_transform(r_tweets.toarray())
+    reduced_X.shape
+    
     plt.figure(figsize=(15, 9))
-    for n_clusters in range(2,4):
-        model = run_clustering(X, n_clusters)
-        models += [model]
+    for n_clusters in range(2,12):
+        result = run_clustering(reduced_X, n_clusters)
         
-        Xdf['label'] = model.labels_
+        Xdf['label'] = result
         #print(Xdf[:2])
         
         interclass_distance_plot(Xdf, n_clusters)
@@ -182,7 +210,7 @@ def process_clusters():
 
     print("Clustering tweet content with %s" % km)pupu
     t0 = time()
-    km.fit(r_tweets_set_0)
+    km.fit(r_tweets)
     print("done in %0.3fs" % (time() - t0))
     print()
     
@@ -197,7 +225,7 @@ def process_clusters():
     #print("Adjusted Rand-Index: %.3f"
     #      % metrics.adjusted_rand_score(labels, km.labels_))
     print("Silhouette Coefficient: %0.3f"
-      % metrics.silhouette_score(r_tweets_set_0, km.labels_, sample_size=1000))
+      % metrics.silhouette_score(r_tweets, km.labels_, sample_size=1000))
     '''
     
 class Test(unittest.TestCase):
