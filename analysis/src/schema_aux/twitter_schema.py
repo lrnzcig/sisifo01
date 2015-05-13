@@ -22,10 +22,11 @@ class Tweet(CachedMixin, Base):
     in_reply_to_user_id = Column(Integer)
     place_full_name = Column(String(256))
     retweet_count = Column(Integer)
-    retweeted = Column(String(1))
+    retweeted = Column(SmallInteger)
     retweeted_id = Column(Integer)
+    retweeted_user_id = Column(Integer)
     text = Column(String(512))
-    truncated = Column(String(1))
+    truncated = Column(SmallInteger)
     user_id = Column(Integer)
 
     def __repr__(self):
@@ -66,11 +67,22 @@ class User(CachedMixin, Base):
 
     @classmethod
     def unique_hash(cls, *arg, **kw):
-        return str(kw['id'])
+        out = ''
+        for key in kw.keys():
+            out += kw[key]
+        return out
 
     @classmethod
     def unique_filter(cls, query, *arg, **kw):
-        return query.filter(User.id == kw['id'])
+        for key in kw.keys():
+            # TODO assumes only 1 key
+            # TODO solve in a better way
+            if key == 'id':
+                return query.filter(User.id == kw['id'])
+            elif key == 'screen_name':
+                return query.filter(User.screen_name == kw['screen_name'])
+            else:
+                raise RuntimeError('Not valid key: ' + key)
 
 class Hashtag(UniqueMixin, Base):
     '''
