@@ -22,7 +22,7 @@ class Tweet(CachedMixin, Base):
     in_reply_to_user_id = Column(Integer)
     place_full_name = Column(String(256))
     retweet_count = Column(Integer)
-    retweeted = Column(SmallInteger)
+    retweet = Column(SmallInteger)
     retweeted_id = Column(Integer)
     retweeted_user_id = Column(Integer)
     text = Column(String(512))
@@ -67,22 +67,11 @@ class User(CachedMixin, Base):
 
     @classmethod
     def unique_hash(cls, *arg, **kw):
-        out = ''
-        for key in kw.keys():
-            out += kw[key]
-        return out
+        return str(kw['id'])
 
     @classmethod
     def unique_filter(cls, query, *arg, **kw):
-        for key in kw.keys():
-            # TODO assumes only 1 key
-            # TODO solve in a better way
-            if key == 'id':
-                return query.filter(User.id == kw['id'])
-            elif key == 'screen_name':
-                return query.filter(User.screen_name == kw['screen_name'])
-            else:
-                raise RuntimeError('Not valid key: ' + key)
+        return query.filter(User.id == kw['id'])
 
 class Hashtag(UniqueMixin, Base):
     '''
@@ -205,6 +194,10 @@ class Manager():
     '''
     
     def __init__(self):
+        import logging
+        logger = logging.getLogger('sqlalchemy.engine')
+        logger.setLevel(logging.ERROR)
+
         # export PATH or pass as an argument!
         properties = yaml.load(open(expanduser("~") + '/.sisifo/connection.properties'))
         database = properties['database']
