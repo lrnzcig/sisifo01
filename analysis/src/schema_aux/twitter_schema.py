@@ -198,6 +198,9 @@ class Manager():
         logger = logging.getLogger('sqlalchemy.engine')
         logger.setLevel(logging.ERROR)
 
+        import os
+        os.environ['NLS_LANG'] = 'SPANISH_SPAIN.UTF8'
+        
         # export PATH or pass as an argument!
         properties = yaml.load(open(expanduser("~") + '/.sisifo/connection.properties'))
         database = properties['database']

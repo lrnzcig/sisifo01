@@ -92,51 +92,79 @@ def tweet_loader(path, filename, session, regs_per_commit=None):
     session.commit()
 
 def user_loader(path, filename, session, regs_per_commit=None):
-    json2csv(os.path.join(path, filename), 
-             os.path.join(path, 'temp.csv'),
-             [{'user' : ['id', 'created_at', 'contributors_enabled', 'description', 'favourites_count',
+    user_column_list = ['created_at', 'contributors_enabled', 'description', 'favourites_count',
                          'followers_count', 'friends_count', 'is_translator', 'listed_count',
                          'location', 'name', 'protected', 'screen_name', 'statuses_count', 'url',
-                         'verified']}])
+                         'verified']
+    
+    '''
+    json2csv(os.path.join(path, filename), 
+             os.path.join(path, 'temp.csv'),
+             [{'user' : ['id'] + user_column_list}])
+             '''
     # no index since the same user might be two times in the file
-    users = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=None)
+    users = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=0, header=None, encoding="utf8")
+    users.columns = user_column_list
+    
+    # users from retweets
+    '''
+    json2csv_entities(os.path.join(path, filename), 
+                      os.path.join(path, 'temp2.csv'),
+                      ['id'], 'retweeted_status', [{'user' : ['id'] + user_column_list}])
+                      '''
+    
+    orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=1, header=None, encoding="utf8")
+    orig_tweets.columns = ['tweet_id'] + user_column_list
+    
+    # drop duplicates by and concat into tot_users
+    users['index'] = users.index
+    users.drop_duplicates(subset=['index'], take_last = True, inplace=True)
+    orig_tweets['index'] = orig_tweets.index
+    orig_tweets.drop_duplicates(subset=['created_at'], take_last = True, inplace=True)
+    orig_tweets.drop('tweet_id', axis=1, inplace=True)
+    tot_users = pd.concat([orig_tweets, users])
+    tot_users.drop_duplicates(subset=['created_at'], take_last = True, inplace=True)
+    tot_users.drop('index', axis=1, inplace=True)
+    
+    
     # pandas reads as nan even for string columns => fill them with empty string
-    users[3].fillna('', inplace=True)
-    users[9].fillna('', inplace=True)
-    users[10].fillna('', inplace=True)
-    users[14].fillna('', inplace=True)
+    tot_users['description'].fillna('', inplace=True)
+    tot_users['location'].fillna('', inplace=True)
+    tot_users['name'].fillna('', inplace=True)
+    tot_users['url'].fillna('', inplace=True)
     counter = 0
-    for user in users.iterrows():
-        user_id = user[1][0]
+    for user in tot_users.iterrows():
+        user_id = user[0]
         old_user = sch.User.get(session, id=user_id)
         if old_user:
-            if old_user.statuses_count < user[1][13]:
+            if old_user.statuses_count < user[1]['statuses_count']:
                 # assumed: if the user twitted more, there could be modifications
-                old_user.contributors_enabled = user[1][2]
-                old_user.description = user[1][3]
-                old_user.favourites_count = user[1][4]
-                old_user.followers_count = user[1][5]
-                old_user.friends_count = user[1][6]
-                old_user.is_translator = user[1][7]
-                old_user.listed_count = user[1][8]
-                old_user.location = user[1][9]
-                old_user.name = user[1][10]
-                old_user.protected = user[1][11]
-                old_user.statuses_count = user[1][13]
-                old_user.url = user[1][14]
-                old_user.verified = user[1][15]
+                old_user.contributors_enabled = user[1]['contributors_enabled']
+                old_user.description = user[1]['description']
+                old_user.favourites_count = user[1]['favourites_count']
+                old_user.followers_count = user[1]['followers_count']
+                old_user.friends_count = user[1]['friends_count']
+                old_user.is_translator = user[1]['is_translator']
+                old_user.listed_count = user[1]['listed_count']
+                old_user.location = user[1]['location']
+                old_user.name = user[1]['name']
+                old_user.protected = user[1]['protected']
+                old_user.statuses_count = user[1]['statuses_count']
+                old_user.url = user[1]['url']
+                old_user.verified = user[1]['verified']
             continue
-        created_at = datetime.strptime(user[1][1], '%a %b %d %H:%M:%S +0000 %Y').replace(tzinfo=UTC)
-        user = sch.User.as_cached(session, id=user_id, screen_name=user[1][12], created_at=created_at,
-                        contributors_enabled=user[1][2], description=user[1][3],
-                        favourites_count = user[1][4], followers_count = user[1][5],
-                        friends_count = user[1][6], is_translator = user[1][7],
-                        listed_count = user[1][8], location = user[1][9], name = user[1][10],
-                        protected = user[1][11], statuses_count = user[1][13], url=user[1][14],
-                        verified = user[1][15])
+        created_at = datetime.strptime(user[1]['created_at'], '%a %b %d %H:%M:%S +0000 %Y').replace(tzinfo=UTC)
+        user = sch.User.as_cached(session, id=user_id, screen_name=user[1]['screen_name'], created_at=created_at,
+                        contributors_enabled=user[1]['contributors_enabled'], description=user[1]['description'],
+                        favourites_count = user[1]['favourites_count'], followers_count = user[1]['followers_count'],
+                        friends_count = user[1]['friends_count'], is_translator = user[1]['is_translator'],
+                        listed_count = user[1]['listed_count'], location = user[1]['location'], name = user[1]['name'],
+                        protected = user[1]['protected'], statuses_count = user[1]['statuses_count'], url=user[1]['url'],
+                        verified = user[1]['verified'])
         counter += 1
         if regs_per_commit and counter % regs_per_commit == 0:
             session.commit()
+            sch.User.flush(session)
     session.commit()
 
 def hashtag_loader(path, filename, session, regs_per_commit=None):
@@ -241,22 +269,16 @@ def fill_in_retweet_info(session, regs_per_commit=None):
 class Test(unittest.TestCase):
 
     def test_tweet_loader(self):
-        delete_all_entities()
+        #delete_all_entities()
         path = guess_path("twitter-files")
         filename = "tweets.20150506-180056.rest-desmontandoaciudadanos.json"
-        load_all_entities(path, filename)
+        #load_all_entities(path, filename)
         
         
-        '''
         manager = sch.Manager()
         session = manager.get_session()
 
-        tweet_loader(path, filename, session, regs_per_commit=100)
-        hashtag_loader(path, filename, session, regs_per_commit=100)
-        tweet_url_loader(path, filename, session, regs_per_commit=100)
-        user_mention_loader(path, filename, session, regs_per_commit=100)
-        user_url_loader(path, filename, session, regs_per_commit=100)
-        '''
+        user_loader(path, filename, session, regs_per_commit=10)
         pass
 
 
