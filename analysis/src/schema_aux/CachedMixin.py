@@ -13,7 +13,10 @@ def _get_from_cache(session, cls, hashfunc, queryfunc, arg, kw):
 
     key = (cls, hashfunc(*arg, **kw))
     if key in cache:
-        return cache[key]
+        # in case object has been flushed
+        obj = cache[key]
+        session.add(obj)
+        return obj
     else:
         with session.no_autoflush:
             q = session.query(cls)
@@ -22,6 +25,7 @@ def _get_from_cache(session, cls, hashfunc, queryfunc, arg, kw):
             if not obj:
                 return None
         cache[key] = obj
+        session.add(obj)
         return obj
 
 def _add_to_cache(session, cls, hashfunc, arg, kw, obj):
@@ -30,13 +34,13 @@ def _add_to_cache(session, cls, hashfunc, arg, kw, obj):
     cache[key] = obj
 
 def _get_cache(session):
-    cache = getattr(session, '_unique_cache', None)
+    cache = getattr(session, '_u_cache', None)
     if cache is None:
-        session._unique_cache = cache = {}
+        session._u_cache = cache = {}
     return cache
 
-    
 class CachedMixin(object):
+    
     @classmethod
     def unique_hash(cls, *arg, **kw):
         raise NotImplementedError()
@@ -66,4 +70,5 @@ class CachedMixin(object):
         obj = cls(*arg, **kw)
         session.add(obj)
         _add_to_cache(session, cls, cls.unique_hash, arg, kw, obj)
+
     
