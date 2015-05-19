@@ -193,18 +193,27 @@ class Manager():
     schema manager
     '''
     
-    def __init__(self):
+    def __init__(self, user=None):
+        '''
+        user: alternative user for ddbb connection. If set, overrides connection.properties
+        '''
         import logging
         logger = logging.getLogger('sqlalchemy.engine')
         logger.setLevel(logging.ERROR)
-
+        
+        '''
+        encoding: env variable to be set in the client machine
+        controlled here by program - TODO should not overwrite if it is set
+        '''
         import os
         os.environ['NLS_LANG'] = 'SPANISH_SPAIN.UTF8'
         
         # export PATH or pass as an argument!
         properties = yaml.load(open(expanduser("~") + '/.sisifo/connection.properties'))
         database = properties['database']
-        url = database['dialect'] + "://" + database['user'] + ":" + database['password'] + '@' + database['host'] + "/" + database['sid']
+        if user == None:
+            user = database['user']
+        url = database['dialect'] + "://" + user + ":" + database['password'] + '@' + database['host'] + "/" + database['sid']
         self.engine = create_engine(url, echo=True)
         Base.metadata.create_all(self.engine)
 

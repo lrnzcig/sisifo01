@@ -35,14 +35,14 @@ def tweet_loader(path, filename, session, regs_per_commit=None):
              ['created_at', 'favorite_count', 'id', 'in_reply_to_status_id', 'in_reply_to_user_id', 'retweet_count',
               'text', 'truncated', {'user' : {'id'}}])
     
-    tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=2, header=None)
+    tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=2, header=None, encoding="utf8")
     
     json2csv_entities(os.path.join(path, filename), 
                       os.path.join(path, 'temp2.csv'),
                       ['id'], 'retweeted_status', ['created_at', 'favorite_count', 'id', 'in_reply_to_status_id', 'in_reply_to_user_id', 'retweet_count',
                                                    'text', 'truncated', {'user' : {'id'}}])
     
-    orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=0, header=None)
+    orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=0, header=None, encoding="utf8")
     
     counter = 0
     for tweet in tweets.iterrows():
@@ -89,6 +89,7 @@ def tweet_loader(path, filename, session, regs_per_commit=None):
         counter += 1
         if regs_per_commit and counter % regs_per_commit == 0:
             session.commit()
+            session.expunge_all()
     session.commit()
 
 def user_loader(path, filename, session, regs_per_commit=None):
@@ -97,21 +98,17 @@ def user_loader(path, filename, session, regs_per_commit=None):
                          'location', 'name', 'protected', 'screen_name', 'statuses_count', 'url',
                          'verified']
     
-    '''
     json2csv(os.path.join(path, filename), 
              os.path.join(path, 'temp.csv'),
              [{'user' : ['id'] + user_column_list}])
-             '''
     # no index since the same user might be two times in the file
     users = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=0, header=None, encoding="utf8")
     users.columns = user_column_list
     
     # users from retweets
-    '''
     json2csv_entities(os.path.join(path, filename), 
                       os.path.join(path, 'temp2.csv'),
                       ['id'], 'retweeted_status', [{'user' : ['id'] + user_column_list}])
-                      '''
     
     orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=1, header=None, encoding="utf8")
     orig_tweets.columns = ['tweet_id'] + user_column_list
@@ -164,40 +161,42 @@ def user_loader(path, filename, session, regs_per_commit=None):
         counter += 1
         if regs_per_commit and counter % regs_per_commit == 0:
             session.commit()
-            sch.User.flush(session)
+            session.expunge_all()
     session.commit()
 
 def hashtag_loader(path, filename, session, regs_per_commit=None):
     json2csv_entities(os.path.join(path, filename), 
                       os.path.join(path, 'temp.csv'),
                       ['id'], 'hashtags', ['text'])
-    hashtags = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=0, header=None)
+    hashtags = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=None, encoding="utf8")
     counter = 0
     for hashtag in hashtags.iterrows():
-        hashtag = sch.Hashtag.as_unique(session, tweet_id=hashtag[0], hashtag=hashtag[1][1])
+        hashtag = sch.Hashtag.as_unique(session, tweet_id=hashtag[1][0], hashtag=hashtag[1][1])
         counter += 1
         if regs_per_commit and counter % regs_per_commit == 0:
             session.commit()
+            session.expunge_all()
     session.commit()
 
 def tweet_url_loader(path, filename, session, regs_per_commit=None):
     json2csv_entities(os.path.join(path, filename), 
                       os.path.join(path, 'temp.csv'),
                       ['id'], 'urls', ['url'])
-    tweeturls = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=None)
+    tweeturls = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=None, encoding="utf8")
     counter = 0
     for tweeturl in tweeturls.iterrows():
         tweeturl = sch.TweetUrl.as_unique(session, tweet_id=tweeturl[1][0], url=tweeturl[1][1])
         counter += 1
         if regs_per_commit and counter % regs_per_commit == 0:
             session.commit()
+            session.expunge_all()
     session.commit()  
         
 def user_mention_loader(path, filename, session, regs_per_commit=None):
     json2csv_entities(os.path.join(path, filename), 
                       os.path.join(path, 'temp.csv'),
                       ['id'], 'user_mentions', ['id'])
-    usermentions = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=None)
+    usermentions = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=None, encoding="utf8")
     counter = 0
     for usermention in usermentions.iterrows():
         tweet_id = usermention[1][0]
@@ -209,6 +208,7 @@ def user_mention_loader(path, filename, session, regs_per_commit=None):
         counter += 1
         if regs_per_commit and counter % regs_per_commit == 0:
             session.commit()
+            session.expunge_all()
     session.commit()  
 
 def user_url_loader(path, filename, session, regs_per_commit=None):
@@ -219,66 +219,31 @@ def user_url_loader(path, filename, session, regs_per_commit=None):
     if os.stat(temp_file).st_size == 0:
         # there are no user urls, not at all uncommon
         return
-    userurls = pd.DataFrame.from_csv(temp_file, index_col=None, header=None)
+    userurls = pd.DataFrame.from_csv(temp_file, index_col=None, header=None, encoding="utf8")
     counter = 0
     for userurl in userurls.iterrows():
         userurl = sch.TweetUrl.as_unique(session, tweet_id=userurl[1][0], url=userurl[1][1])
         counter += 1
         if regs_per_commit and counter % regs_per_commit == 0:
             session.commit()
-    session.commit()
-    
-def fill_in_retweet_info(session, regs_per_commit=None):
-    q = session.query(sch.Tweet)
-    tweets = pd.read_sql(q.statement, session.bind)
-    counter = 0
-    for tweet in tweets.iterrows():
-        if tweet[1]['text'].startswith('RT @'):
-            tmp = tweet[1]['text'].split('RT @')[1]
-            screen_name = tmp.split(':')[0]
-            try:
-                tweet_text = tmp.split(screen_name + ': ')[1].rstrip('?') + '%'
-            except IndexError:
-                tweet_text = None
-            if tweet_text:
-                # TODO encoding problem
-                # TODO these should go to cache as well, at least the ones that have been found ???
-                original_tweet = session.query(sch.Tweet).filter(sch.Tweet.text.like(tweet_text.replace('?', '%'))).first()
-
-            # TODO this is to put the tweet into the session 
-            tweet = sch.Tweet.get(session, id=tweet[1]['id'])
-            tweet.retweeeted = True
-                            
-            if original_tweet:
-                tweet.retweeted_id = original_tweet.id
-                tweet.retweeted_user_id = original_tweet.user_id
-            else:
-                # original tweet not found. Let's try with screen name
-                # to at least inform the user
-                user = sch.User.get(session, screen_name=screen_name)
-                if user:
-                    # read_sql does not put tweet in the session/cache
-                    # TODO get all and add to cache???
-                    tweet.retweeted_user_id = user.id
-            counter += 1
-            if regs_per_commit and counter % regs_per_commit == 0:
-                session.commit()
-    session.commit()
-                
+            session.expunge_all()
+    session.commit()                
     
 class Test(unittest.TestCase):
 
     def test_tweet_loader(self):
-        #delete_all_entities()
+        delete_all_entities()
         path = guess_path("twitter-files")
         filename = "tweets.20150506-180056.rest-desmontandoaciudadanos.json"
-        #load_all_entities(path, filename)
+        load_all_entities(path, filename)
         
         
+        '''
         manager = sch.Manager()
         session = manager.get_session()
 
         user_loader(path, filename, session, regs_per_commit=10)
+        '''
         pass
 
 
