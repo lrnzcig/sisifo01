@@ -193,16 +193,14 @@ class Manager():
     schema manager
     '''
     
-    def __init__(self, user=None):
+    def __init__(self, user=None, alchemy_echo=True):
         '''
         user: alternative user for ddbb connection. If set, overrides connection.properties
+        alchemy_echo: if False, disables all messages from sqlalchemy
         '''
-        import logging
-        logger = logging.getLogger('sqlalchemy.engine')
-        logger.setLevel(logging.ERROR)
-        
+
         '''
-        encoding: env variable to be set in the client machine
+        solve encoding: env variable to be set in the client machine
         controlled here by program - TODO should not overwrite if it is set
         '''
         import os
@@ -214,7 +212,7 @@ class Manager():
         if user == None:
             user = database['user']
         url = database['dialect'] + "://" + user + ":" + database['password'] + '@' + database['host'] + "/" + database['sid']
-        self.engine = create_engine(url, echo=True)
+        self.engine = create_engine(url, echo=alchemy_echo)
         Base.metadata.create_all(self.engine)
 
     def get_session(self):
