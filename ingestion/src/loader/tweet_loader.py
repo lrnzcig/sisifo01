@@ -10,6 +10,12 @@ from nltk.twitter.util import guess_path, json2csv, json2csv_entities
 from schema_aux import twitter_schema as sch
 from datetime import datetime
 from nltk.compat import UTC
+import logging.handlers
+# performance checks
+from pympler import summary, muppy
+import psutil
+
+
 
 class TweetLoader():
     '''
@@ -19,29 +25,38 @@ class TweetLoader():
                         'followers_count', 'friends_count', 'is_translator', 'listed_count',
                         'location', 'name', 'protected', 'screen_name', 'statuses_count', 'url',
                         'verified']
+    
+    default_regs_per_commit = 10000
 
+    def __init__(self):
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.INFO)
+        fh = logging.handlers.RotatingFileHandler('/Users/lorenzorubio/Downloads/logtest.log', maxBytes=102400000, backupCount=5)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        self.logger.addHandler(fh)
+
+        # one session for the full load to make use of the cache
+        self.manager = sch.Manager()
+        self.session = self.manager.get_session()
 
     def load_all_entities(self, path, filename):
-        # one session for the full load to make use of the cache
-        manager = sch.Manager()
-        session = manager.get_session()
-    
-        self.tweet_loader(path, filename, session, regs_per_commit=100)
-        self.user_loader(path, filename, session, regs_per_commit=100)
-        self.hashtag_loader(path, filename, session, regs_per_commit=100)
-        self.tweet_url_loader(path, filename, session, regs_per_commit=100)
-        self.user_mention_loader(path, filename, session, regs_per_commit=100)
-        self.user_url_loader(path, filename, session, regs_per_commit=100)
+        self.tweet_loader(path, filename, regs_per_commit=self.default_regs_per_commit)
+        self.user_loader(path, filename, regs_per_commit=self.default_regs_per_commit)
+        self.hashtag_loader(path, filename, regs_per_commit=self.default_regs_per_commit)
+        self.tweet_url_loader(path, filename, regs_per_commit=self.default_regs_per_commit)
+        self.user_mention_loader(path, filename, regs_per_commit=self.default_regs_per_commit)
+        self.user_url_loader(path, filename, regs_per_commit=self.default_regs_per_commit)
+        self.session.close()
     
     
     def delete_all_entities(self):
-        manager = sch.Manager()
-        session = manager.get_session()
-        manager.delete_all()
-        session.commit()
+        self.manager.delete_all()
+        self._commit()
+        self.session = self.manager.get_session()        
     
     
-    def tweet_loader(self, path, filename, session, regs_per_commit=None):
+    def tweet_loader(self, path, filename, regs_per_commit=None):
         json2csv(os.path.join(path, filename), 
                  os.path.join(path, 'temp.csv'),
                  ['created_at', 'favorite_count', 'id', 'in_reply_to_status_id', 'in_reply_to_user_id', 'retweet_count',
@@ -60,7 +75,7 @@ class TweetLoader():
         for tweet in tweets.iterrows():
             created_at = datetime.strptime(tweet[1][0], '%a %b %d %H:%M:%S +0000 %Y').replace(tzinfo=UTC)
             tweet_id = tweet[0]
-            old_tweet = sch.Tweet.get(session, id=tweet_id)
+            old_tweet = sch.Tweet.get(self.session, id=tweet_id)
             if old_tweet:
                 if old_tweet.retweet_count < tweet[1][5] or old_tweet.favorite_count < tweet[1][1]:
                     # it is more recent
@@ -78,7 +93,7 @@ class TweetLoader():
                 # this is a retweet
                 retweet = True
                 original_tweet_id = original_tweet_df[3]
-                original_tweet = sch.Tweet.get(session, id=original_tweet_id)
+                original_tweet = sch.Tweet.get(self.session, id=original_tweet_id)
                 if not original_tweet:
                     # insert it already
                     orig_created_at = datetime.strptime(original_tweet_df[1], '%a %b %d %H:%M:%S +0000 %Y').replace(tzinfo=UTC)
@@ -86,26 +101,24 @@ class TweetLoader():
                     if original_tweet_df[8]:
                         # the original is numpy.bool_ and SQLAlchemy does not accept it
                         truncated = True
-                    sch.Tweet.as_cached(session, created_at=orig_created_at, favorite_count=original_tweet_df[2],
+                    sch.Tweet.as_cached(self.session, created_at=orig_created_at, favorite_count=original_tweet_df[2],
                                         id=original_tweet_id, in_reply_to_status_id=original_tweet_df[4],
                                         in_reply_to_user_id=original_tweet_df[5], retweet_count=original_tweet_df[6],
                                         retweet=False, text=original_tweet_df[7], truncated=truncated,
                                         user_id=original_tweet_df[9], retweeted_id=None, retweeted_user_id=None)
                 retweeted_id = original_tweet_id
                 retweeted_user_id = original_tweet_df[9]
-            sch.Tweet.as_cached(session, created_at=created_at, favorite_count=tweet[1][1],
+            sch.Tweet.as_cached(self.session, created_at=created_at, favorite_count=tweet[1][1],
                                 id=tweet_id, in_reply_to_status_id=tweet[1][3],
                                 in_reply_to_user_id=tweet[1][4], retweet_count=tweet[1][5],
                                 retweet=retweet, text=tweet[1][6], truncated=tweet[1][7],
                                 user_id=tweet[1][8], retweeted_id=retweeted_id, retweeted_user_id=retweeted_user_id)
             counter += 1
-            if regs_per_commit and counter % regs_per_commit == 0:
-                session.commit()
-                session.expunge_all()
-        session.commit()
+            self._commit(counter)
+        self._commit()
     
     
-    def user_loader(self, path, filename, session, regs_per_commit=None):   
+    def user_loader(self, path, filename, regs_per_commit=None):   
         json2csv(os.path.join(path, filename), 
                  os.path.join(path, 'temp.csv'),
                  [{'user' : ['id'] + self.user_column_list}])
@@ -140,7 +153,7 @@ class TweetLoader():
         counter = 0
         for user in tot_users.iterrows():
             user_id = user[0]
-            old_user = sch.User.get(session, id=user_id)
+            old_user = sch.User.get(self.session, id=user_id)
             if old_user:
                 if old_user.statuses_count < user[1]['statuses_count']:
                     # assumed: if the user twitted more, there could be modifications
@@ -159,7 +172,7 @@ class TweetLoader():
                     old_user.verified = user[1]['verified']
                 continue
             created_at = datetime.strptime(user[1]['created_at'], '%a %b %d %H:%M:%S +0000 %Y').replace(tzinfo=UTC)
-            user = sch.User.as_cached(session, id=user_id, screen_name=user[1]['screen_name'], created_at=created_at,
+            user = sch.User.as_cached(self.session, id=user_id, screen_name=user[1]['screen_name'], created_at=created_at,
                             contributors_enabled=user[1]['contributors_enabled'], description=user[1]['description'],
                             favourites_count = user[1]['favourites_count'], followers_count = user[1]['followers_count'],
                             friends_count = user[1]['friends_count'], is_translator = user[1]['is_translator'],
@@ -167,13 +180,11 @@ class TweetLoader():
                             protected = user[1]['protected'], statuses_count = user[1]['statuses_count'], url=user[1]['url'],
                             verified = user[1]['verified'])
             counter += 1
-            if regs_per_commit and counter % regs_per_commit == 0:
-                session.commit()
-                session.expunge_all()
-        session.commit()
+            self._commit(counter)
+        self._commit()
 
     
-    def hashtag_loader(self, path, filename, session, regs_per_commit=None):
+    def hashtag_loader(self, path, filename, regs_per_commit=None):
         json2csv_entities(os.path.join(path, filename), 
                           os.path.join(path, 'temp.csv'),
                           ['id'], 'hashtags', ['text'])
@@ -184,14 +195,13 @@ class TweetLoader():
         hashtags.drop_duplicates(inplace=True)
         counter = 0
         for hashtag in hashtags.iterrows():
-            hashtag = sch.Hashtag.as_unique(session, tweet_id=hashtag[1][0], hashtag=hashtag[1][1])
+            hashtag = sch.Hashtag.as_unique(self.session, tweet_id=hashtag[1][0], hashtag=hashtag[1][1])
             counter += 1
             if regs_per_commit and counter % regs_per_commit == 0:
-                session.commit()
-                session.expunge_all()
-        session.commit()
+                self._commit(counter)
+        self._commit()
     
-    def tweet_url_loader(self, path, filename, session, regs_per_commit=None):
+    def tweet_url_loader(self, path, filename, regs_per_commit=None):
         json2csv_entities(os.path.join(path, filename), 
                           os.path.join(path, 'temp.csv'),
                           ['id'], 'urls', ['url'])
@@ -201,14 +211,12 @@ class TweetLoader():
         tweeturls.drop_duplicates(inplace=True)
         counter = 0
         for tweeturl in tweeturls.iterrows():
-            tweeturl = sch.TweetUrl.as_unique(session, tweet_id=tweeturl[1][0], url=tweeturl[1][1])
+            tweeturl = sch.TweetUrl.as_unique(self.session, tweet_id=tweeturl[1][0], url=tweeturl[1][1])
             counter += 1
-            if regs_per_commit and counter % regs_per_commit == 0:
-                session.commit()
-                session.expunge_all()
-        session.commit()  
+            self._commit(counter)
+        self._commit()
             
-    def user_mention_loader(self, path, filename, session, regs_per_commit=None):
+    def user_mention_loader(self, path, filename, regs_per_commit=None):
         json2csv_entities(os.path.join(path, filename), 
                           os.path.join(path, 'temp.csv'),
                           ['id'], 'user_mentions', ['id'])
@@ -219,18 +227,16 @@ class TweetLoader():
         counter = 0
         for usermention in usermentions.iterrows():
             tweet_id = usermention[1][0]
-            old_tweet = sch.Tweet.get(session, id=tweet_id)
+            old_tweet = sch.Tweet.get(self.session, id=tweet_id)
             if old_tweet == None:
                 raise RuntimeError("Incongruent data - there's user mentions for a tweet that does not exist. Tweet id: " + str(tweet_id))
-            usermention = sch.UserMention.as_unique(session, tweet_id=tweet_id, source_user_id=old_tweet.user_id, 
+            usermention = sch.UserMention.as_unique(self.session, tweet_id=tweet_id, source_user_id=old_tweet.user_id, 
                                           target_user_id=usermention[1][1])
             counter += 1
-            if regs_per_commit and counter % regs_per_commit == 0:
-                session.commit()
-                session.expunge_all()
-        session.commit()  
+            self._commit(counter)
+        self._commit()
     
-    def user_url_loader(self, path, filename, session, regs_per_commit=None):
+    def user_url_loader(self, path, filename, regs_per_commit=None):
         temp_file = os.path.join(path, 'temp.csv')
         json2csv_entities(os.path.join(path, filename), 
                           temp_file,
@@ -245,12 +251,44 @@ class TweetLoader():
 
         counter = 0
         for userurl in userurls.iterrows():
-            userurl = sch.TweetUrl.as_unique(session, tweet_id=userurl[1][0], url=userurl[1][1])
+            userurl = sch.TweetUrl.as_unique(self.session, tweet_id=userurl[1][0], url=userurl[1][1])
             counter += 1
-            if regs_per_commit and counter % regs_per_commit == 0:
-                session.commit()
-                session.expunge_all()
-        session.commit()                
+            self._commit(counter)
+        self._commit()
+        
+    def _commit(self, counter=0, regs_per_commit=None):
+        regs = self.default_regs_per_commit
+        if regs_per_commit:
+            regs = regs_per_commit
+        if regs and counter % regs == 0:
+            self.session.commit()
+            self.session.expunge_all()
+            # get the cache and pass it to next session - not good results
+            #cache = getattr(self.session, '_u_cache', None)
+            self.session.close()
+            self.session = self.manager.get_session()
+            #self.session._u_cache = cache
+            if counter % 15000 == 0:
+                self.memory_usage("counter = " + str(counter))
+        
+    def get_virtual_memory_usage_kb(self):
+        """
+        The process's current virtual memory size in Kb, as a float.
+
+        """
+        return float(psutil.Process().memory_info_ex().vms) / 1024.0
+
+    def memory_usage(self, where):
+        """
+        Print out a basic summary of memory usage.
+    
+        """
+        mem_summary = summary.summarize(muppy.get_objects())
+        self.logger.info("Memory summary:" + where)
+        for line in summary.format_(mem_summary, limit=2, sort='size', order='descending'):
+            self.logger.info(line)
+        self.logger.info("VM: %.2fMb" % (self.get_virtual_memory_usage_kb() / 1024.0))
+                        
     
 class Test(unittest.TestCase):
 
@@ -263,10 +301,7 @@ class Test(unittest.TestCase):
         
         
         '''
-        manager = sch.Manager()
-        session = manager.get_session()
-
-        dumper.user_loader(path, filename, session, regs_per_commit=10)
+        dumper.user_loader(path, filename, regs_per_commit=10)
         '''
         pass
 
