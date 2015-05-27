@@ -37,7 +37,7 @@ class TweetLoader():
         self.logger.addHandler(fh)
 
         # one session for the full load to make use of the cache
-        self.manager = sch.Manager()
+        self.manager = sch.Manager(alchemy_echo=False)
         self.session = self.manager.get_session()
 
     def load_all_entities(self, path, filename):
