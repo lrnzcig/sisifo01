@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Created on 14 de abr. de 2015
 
@@ -10,229 +11,300 @@ import numpy as np
 from schema_aux import list_of_user_clustering as luc
 from schema_aux import twitter_schema as sch
 from nltk.tokenize.casual import TweetTokenizer
-from nltk.probability import FreqDist
-from nltk.corpus import stopwords
-#from nltk.stem import SnowballStemmer
+from nltk.corpus import stopwords as nltk_stopwords
+from nltk.stem import SnowballStemmer
+from nltk.cluster import GAAClusterer
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.cluster import KMeans
-from sklearn import metrics
-from time import time
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import pairwise_distances
+from time import time
+from os.path import expanduser
+import io
 import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
 
-def run_clustering_model(X, n_clusters):
-    model = AgglomerativeClustering(n_clusters=n_clusters, linkage="average", affinity="cosine")
-
-    print("Clustering tweet content with %s" % model)
-    t0 = time()
-    model.fit(X)
-    print("done in %0.3fs" % (time() - t0))
-    print()
-    return model
-
-def run_clustering(X, n_clusters):
-    model = AgglomerativeClustering(n_clusters=n_clusters, linkage="average", affinity="cosine")
-
-    print("Clustering tweet content with %s" % model)
-    t0 = time()
-    result = model.fit_predict(X)
-    print("done in %0.3fs" % (time() - t0))
-    print()
-    return result
-
-def interclass_distance_plot(Xdf, n_clusters):
-    # interclass distances plot
-    # from http://scikit-learn.org/stable/auto_examples/cluster/plot_agglomerative_clustering_metrics.html#example-cluster-plot-agglomerative-clustering-metrics-py
-    avg_dist = np.zeros((n_clusters, n_clusters))
-
-    plt.subplot(2, 5, n_clusters-1)
-    for i in range(n_clusters):
-        for j in range(n_clusters):
-            avg_dist[i, j] = pairwise_distances(Xdf.loc[Xdf['label'] == i], Xdf.loc[Xdf['label'] == j],
-                                                metric='cosine').mean()
-    avg_dist /= avg_dist.max()
-    for i in range(n_clusters):
-        for j in range(n_clusters):
-            plt.text(i, j, '%5.3f' % avg_dist[i, j],
-                 verticalalignment='center',
-                 horizontalalignment='center')
-
-    plt.imshow(avg_dist, interpolation='nearest', #cmap=plt.cm.gnuplot2,
-               vmin=0)
-    plt.xticks(range(n_clusters), range(n_clusters))
-    plt.yticks(range(n_clusters), range(n_clusters))
-    plt.colorbar()
-    plt.suptitle("Interclass cosine distances")
-    plt.tight_layout()
-
-def process_clusters():
-    # example: get list of users 
-    users_list_mgr = luc.Manager()
-    users = users_list_mgr.get()
-    pure_set_0 = users.loc[users['cluster_label'] == '0'].loc[users['additional_label'] == 'pure_set']
-    print(len(pure_set_0))
-    
-    schema_mgr = sch.Manager()
-    session = schema_mgr.get_session()
-
-    # remove stopwords to fdist (it could also be done to corpus instead
-    stopwords_additional = ['@', ':', '?', '.', ',', '"', 'http', '#', '!', '!', '``', "''", "q", "d", "..."]
-
-    # example: get tweets of that pure_set
-    '''
-    q = session.query(sch.Tweet).join(sch.User, sch.User.id == sch.Tweet.user_id) \
-        .join(luc.ListOfUserClustering, luc.ListOfUserClustering.id == sch.User.id) \
-        .filter(luc.ListOfUserClustering.cluster_label == '0').filter(luc.ListOfUserClustering.additional_label == 'pure_set')
-    tweets_set_0 = pd.read_sql(q.statement, session.bind)
-    print(tweets_set_0.shape)
-    tweet1_tokens = word_tokenize(tweets_set_0.loc[1, 'text'])
-    print(sorted(set(tweet1_tokens)))
-    
-    corpus = [word for tweet in tweets_set_0.loc[:, 'text'] for word in word_tokenize(tweet)]
-    print(sorted(set(corpus)))
-    print(len(set(corpus)))
-    
-    # diversity (how many times a word is repeated on average)
-    print("diversity", len(corpus) / len(set(corpus)))
-    
-    # frequency distribution
-    fdist = FreqDist(corpus)
-    #fdist.plot(50, cumulative=True)
-    
-    print(fdist['ahorapodemos'])
-
-    fdist_clean = [item for item in fdist.items() 
-                   if item[0].lower() not in stopwords.words('spanish') and item[0].lower() not in stopwords_additional]
-    
-    fdist_clean_df = pd.DataFrame(fdist_clean, columns=['word', 'count'])
-    fdist_clean_df.sort('count', ascending=False)[:50]
-    '''
-    
-    # all tweets (depending on performance)
-    q = session.query(sch.Tweet)
-    all_tweets = pd.read_sql(q.statement, session.bind)
-    all_tweets = all_tweets.loc[:25000]
-    print(all_tweets.shape)
-    
-    
-
-    tokenizer = TweetTokenizer()
-    '''
-    stemmer = SnowballStemmer('spanish')
-    def tokenize(text):
-        tokens = word_tokenize(text)
-        return [stemmer.stem(token) for token in tokens]
-        '''
-    def tokenize(text):
-        w_list = tokenizer.tokenize(text)
-        return [x for x in w_list if not x.startswith("http")]
-
-    vectorizer = TfidfVectorizer(ngram_range=(1,1),
-                                 strip_accents='ascii',
-                                 norm='l2',
-                                 min_df=2, 
-                                 tokenizer=tokenize,
-                                 stop_words=stopwords.words('spanish') + stopwords_additional)
-    r_tweets = vectorizer.fit_transform(all_tweets.loc[:, 'text'])
-    print(r_tweets.shape)
-
-    feature_names = vectorizer.get_feature_names()
-    print(feature_names[:15])
-    print(len(feature_names))
-    print(len(r_tweets.nonzero()))
-    '''
-    for col in r_tweets.nonzero()[1]:
-        # results is matrix with all the tweets, results[0,... gives values for tweet0
-        print(feature_names[col], ' - ', r_tweets[0, col])
-        return
-        '''
-    
-    print(type(r_tweets))
-    # not good for performance; output of vectorizer is scipy.sparse.csr_matrix (compressed)
-    # could be converted to pd.SparseDataFrame
+class TweetClustering():
     
     '''
-    X = r_tweets.toarray()
-    print(r_tweets[:10])
-    print(X[:10])
+    #TODO move to another class
+    it includes:
+    - chars not processed ok by stemmer/tokenizer
+    - common words in this context (review ????)
+    - #desmontandoaciudadanos not added so that it can be used as a fixed feature
     '''
-
+    stopwords_additional = ['@', ':', '?', '.', ',', '"', 'http', '#', '!', '!', '``', "''", "q", "d", "...",
+                            #"#desmontandoaciudadanos",
+                            "#ciudadanos", "ciudadanos", "cs", "c's",
+                            "ciutadans", '@ahorapodemos', '@albert_rivera', '@ciudadanoscs',
+                            "albert", "rivera", ".."]
     
-    '''
-    create a dataframe Xdf for both the vectors and the results of the clustering
-    '''
-    X = r_tweets.toarray()
-    print(r_tweets[:10])
-    print(X[:10])
-    
-    Xdf = pd.SparseDataFrame(X)
-    # from http://stackoverflow.com/questions/17818783/populate-a-pandas-sparsedataframe-from-a-scipy-sparse-matrix
-    # very slow and I don't think it does anything different
-    #Xdf = pd.SparseDataFrame([ pd.SparseSeries(results_corpus[i].toarray().ravel()) 
-    #                              for i in np.arange(results_corpus.shape[0]) ])
-    print(Xdf.shape)
-    
-    '''
-    reduce dimensions (how many?)
-    '''
-    reducer = PCA(n_components=333)
-    reduced_X = reducer.fit_transform(r_tweets.toarray())
-    reduced_X.shape
-    
-    plt.figure(figsize=(15, 9))
-    for n_clusters in range(2,12):
-        result = run_clustering(reduced_X, n_clusters)
+    def __init__(self):
+        self.session = self.get_session()
+        self.stemmer = SnowballStemmer('spanish')
+        self.tokenizer = TweetTokenizer()
+        self.stem_pairs = {}
         
-        Xdf['label'] = result
-        #print(Xdf[:2])
+        # load common words
+        f = io.open(expanduser("~") + '/.sisifo/common_words_list.txt', mode='r', encoding='utf8')
+        self.common_words = [self.stemmer.stem(text) for text in f.read().splitlines()]
+    
+        self.stopwords = self.common_words + [self.stemmer.stem(x) for x in nltk_stopwords.words('spanish')] + self.stopwords_additional
         
-        interclass_distance_plot(Xdf, n_clusters)
-        
-        clusters = []
-        for label in range(n_clusters):
-            print("===> label " + str(label))
-            cluster = Xdf.loc[Xdf['label'] == label]
-            clusters += [cluster]
-            print("number of tweets: " + str(len(cluster.index)))
-            print("sample tweets")
-            for i in range(len(cluster.index)):
-                if len(cluster.index) == i:
-                    break
-                print(all_tweets.loc[cluster.index[i], 'text'])
+    '''
+    gets tweets using a join to user clustering
+    '''
+    def get_tweets(self, cluster_label='belief_prop', additional_label='cs', rt_threshold=0):
+        q = self.session.query(sch.Tweet) \
+            .filter(sch.Tweet.retweet == False).filter(sch.Tweet.retweet_count >= rt_threshold) \
+            .join(luc.ListOfUserClustering, luc.ListOfUserClustering.id == sch.Tweet.user_id) \
+            .filter(luc.ListOfUserClustering.cluster_label == cluster_label) \
+            .filter(luc.ListOfUserClustering.additional_label == additional_label)
             
-    plt.show()
+        tweets = pd.read_sql(q.statement, self.session.bind)
+        print("tweets.shape " + str(tweets.shape))
+        return tweets
 
-    '''    
-    km = KMeans(n_clusters=2, init='k-means++', max_iter=100, n_init=1,
-                verbose=True)
+    def vectorize_tokenize(self, tweets, min_df=0):
+        self.stem_pairs = {}
+        vectorizer = TfidfVectorizer(ngram_range=(1,1),
+                                     strip_accents='ascii',
+                                     norm='l2',
+                                     max_df=1.0,
+                                     min_df=min_df,
+                                     tokenizer=self.tokenize,
+                                     stop_words=self.stopwords)
+        r_tweets = vectorizer.fit_transform(tweets.loc[:, 'text'])
+        print(r_tweets.shape)
+        print(vectorizer.get_feature_names())
+        return r_tweets, vectorizer.get_feature_names()
+    
+    def vectorize_vocabulary(self, tweets, vocabulary):
+        vectorizer = TfidfVectorizer(ngram_range=(1,1),
+                     strip_accents='ascii',
+                     norm='l2',
+                     vocabulary=vocabulary,
+                     tokenizer=self.tokenize)
 
-    print("Clustering tweet content with %s" % km)pupu
-    t0 = time()
-    km.fit(r_tweets)
-    print("done in %0.3fs" % (time() - t0))
-    print()
+        r_tweets = vectorizer.fit_transform(tweets.loc[:, 'text'])
+        print(r_tweets.shape)
+        print(vectorizer.get_feature_names())
+        return r_tweets, vectorizer.get_feature_names()
     
-    print(km.labels_.shape)
+    def get_session(self):
+        schema_mgr = sch.Manager(user='SISIFO01_AUCOMMAN', alchemy_echo=False)
+        return schema_mgr.get_session()
     
-    tweets_set_0['label'] = km.labels_
-    print(len(tweets_set_0.loc[tweets_set_0['label'] == 0]))
-    print(len(tweets_set_0.loc[tweets_set_0['label'] == 1]))
-    #print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels, km.labels_))
-    #print("Completeness: %0.3f" % metrics.completeness_score(labels, km.labels_))
-    #print("V-measure: %0.3f" % metrics.v_measure_score(labels, km.labels_))
-    #print("Adjusted Rand-Index: %.3f"
-    #      % metrics.adjusted_rand_score(labels, km.labels_))
-    print("Silhouette Coefficient: %0.3f"
-      % metrics.silhouette_score(r_tweets, km.labels_, sample_size=1000))
-    '''
+    def tokenize(self, text):
+        # removing some addional chars
+        chars_to_remove = set(['´', "'"])
+        text_chars = ''.join([c for c in text if c not in chars_to_remove])
+        
+        # reformatting - could be removed
+        text_words = text_chars.replace("c s", "cs")
+        
+        # do not touch urls
+        urls = [x for x in text_words.split() if x.startswith("http")]
+        #print (urls)
+
+        # tokenize and stem
+        w_list = self.tokenizer.tokenize(text_words)
+        no_url = [self.stem(x.lower()) for x in w_list if not x.startswith("http") and len(x) > 1]
+        return no_url + urls
+
+    def stem(self, text):     
+        if 'jaja' in text:
+            return 'jaja'
+        if text.startswith('izq'):
+            return 'izq'
+        if text.startswith('catal'):
+            return 'catal'
+        if text.startswith('..'):
+            return '..'
+        if text.startswith('andalu'):
+            return 'andalu'
+        if text.startswith('calumni'):
+            return 'calumni'
+        if text.startswith('corrup'):
+            return 'corrup'
+        if text.startswith('democra'):
+            return 'democra'
+        if text.startswith('descalif'):
+            return 'descalif'
+        if text.startswith('deber'):
+            return 'deber'
+        if text.startswith('financ'):
+            return 'financ'
+        if 'podemos' in text and 'desmontandoapodemos' not in text and 'podemostienemiedo' not in text:
+            return 'podemos'
+        if text == 'hashtag' or text == 'ht' or text == 'hastag':
+            return 'hashtag'
+        if text == 'pablemos' or text == 'potemos' or text.startswith('podemit'):
+            return 'pablemos'
+        if text.startswith('nevi'):
+            return 'nervi'
+        if 'centro' in text and 'izq' in text:
+            return 'centroizquierda'
+        if 'ciudada' in text or 'ciutada' in text or text == 'cs' or text == "c's":
+            if not text.startswith('#'):
+                return 'ciudadan'
+        if 'derech' in text:
+            return 'derech'
+        if 'falang' in text or 'falanj' in text or 'fascist' in text \
+            or 'franquism' in text or 'franquist' in text or 'facha' in text or 'franco' in text \
+            or 'nazi' in text:
+            return 'falang'
+        if 'racist' in text or 'racism' in text or 'xenof' in text:
+            return 'racist'
+        if 'psoe' in text:
+            return text
+        if 'pp' in text or 'psoe' in text:
+            return 'pp'
+        if 'venez' in text or text.startswith('chav') or text.startswith('bolivar')\
+            or text.startswith('maduro'):
+            return 'venez'
+        if text == '#elcambiocs' or text == '#elcambiosensato' or text== '#cambiosensato' \
+            or text == '#cuidadanoscumple':
+            return '#cambiosensato'
+        if text.startswith('#') or text.startswith('@'):
+            return text
+        try:
+            number = int(text)
+            if number < 1900:    
+                return 'number'
+            return number
+        except ValueError:
+            key = self.stemmer.stem(text)
+            if key in self.stem_pairs:
+                self.stem_pairs[key] += [text]
+            else:
+                self.stem_pairs[key] = [text]
+            return key
     
+    def run_clustering(self, X, n_clusters):
+        model = AgglomerativeClustering(n_clusters=n_clusters, linkage="average", affinity="cosine")
+    
+        print("Clustering tweet content with %s" % model)
+        t0 = time()
+        result = model.fit_predict(X)
+        print("done in %0.3fs" % (time() - t0))
+        print()
+        return result
+    
+    def interclass_distance_plot(self, Xdf, n_clusters):
+        # interclass distances plot
+        # from http://scikit-learn.org/stable/auto_examples/cluster/plot_agglomerative_clustering_metrics.html#example-cluster-plot-agglomerative-clustering-metrics-py
+        avg_dist = np.zeros((n_clusters, n_clusters))
+    
+        plt.subplot(2, 5, n_clusters-1)
+        for i in range(n_clusters):
+            for j in range(n_clusters):
+                avg_dist[i, j] = pairwise_distances(Xdf.loc[Xdf['label'] == i], Xdf.loc[Xdf['label'] == j],
+                                                    metric='cosine').mean()
+        avg_dist /= avg_dist.max()
+        for i in range(n_clusters):
+            for j in range(n_clusters):
+                plt.text(i, j, '%5.3f' % avg_dist[i, j],
+                     verticalalignment='center',
+                     horizontalalignment='center')
+    
+        plt.imshow(avg_dist, interpolation='nearest', #cmap=plt.cm.gnuplot2,
+                   vmin=0)
+        plt.xticks(range(n_clusters), range(n_clusters))
+        plt.yticks(range(n_clusters), range(n_clusters))
+        plt.colorbar()
+        plt.suptitle("Interclass cosine distances")
+        plt.tight_layout()
+    
+    def show_features_sorted_by_counts(self, r_tweets, feature_list):
+        features = pd.DataFrame(feature_list, columns=['feature'])
+        features['count'] = [r_tweets.nonzero()[1].tolist().count(i) for i in features.index]
+        print(features.sort(columns=['count'], ascending=False))
+        
+    def get_vector_column_counts(self, r_tweets):
+        # r_tweets is a sparse matrix, counting number of columns that are not 0 per row
+        return [r_tweets.nonzero()[0].tolist().count(i) for i in range(r_tweets.shape[0])]
+    
+    def check_columns_percent(self, r_tweets):
+        column_counts_vector = self.get_vector_column_counts(r_tweets)
+        if column_counts_vector.count(0) > r_tweets.shape[0] / 10:
+            print("CAUTION! More than 10% of tweets have no columns. Percent: " + str(column_counts_vector.count(0) * 100 / r_tweets.shape[0]))
+        return column_counts_vector
+
+    def check_all_have_columns(self, r_tweets):
+        column_counts_vector = self.get_vector_column_counts(r_tweets)
+        if column_counts_vector.count(0) > 0:
+            raise RuntimeError('ERROR!!! Should have selected tweets with features')
+        return column_counts_vector
+            
+    def get_tweets_with_columns(self, tweets, r_tweets, column_counts_vector):
+        Xdf = pd.SparseDataFrame(r_tweets.toarray())
+        Xdf['counts'] = column_counts_vector
+        tweets_wc = tweets.iloc[Xdf.loc[Xdf['counts'] > 1].index]
+        print(tweets_wc.shape)
+        return tweets_wc
+    
+    def cluster(self, r_tweets, number_of_clusters=10):
+        X = r_tweets.toarray()
+        Xdf = pd.SparseDataFrame(X)
+        print(Xdf.shape)
+        
+        clusterer = GAAClusterer(number_of_clusters)
+        clusters = clusterer.cluster(X, assign_clusters=True, trace=False)
+        Xdf['cluster'] = clusters
+        return Xdf
+        
+    def cluster_summary(self, Xdf, number_of_clusters, tweets, filename):
+        f2 = open('/Users/lorenzorubio/Downloads/' + filename, mode='w')
+        for cluster in range(number_of_clusters):
+            print("===> cluster " + str(cluster))
+            cluster_tweets = Xdf.loc[Xdf['cluster'] == cluster]
+            print("number of tweets: " + str(len(cluster_tweets.index)))
+            for i in range(len(cluster_tweets.index)):
+                f2.write('(' + str(cluster) + ',' + str(cluster_tweets.index[i]) + ')' 
+                         + tweets.iloc[cluster_tweets.index[i]]['text'] + '\n')
+        f2.close()
+    
+    def show_features_for_tweet(self, feature_list, x):
+        features = pd.DataFrame(feature_list, columns=['feature'])
+        print(features.loc[x != 0, 'feature'])
+                
 class Test(unittest.TestCase):
 
 
     def testProcess(self):
-        process_clusters()
+        tc = TweetClustering()
+        # unos pocos tweets de CS y coger las palabras más comunes
+        tweets = tc.get_tweets(additional_label='cs', rt_threshold=6)
+        r_tweets, feature_list = tc.vectorize_tokenize(tweets, min_df=11)
+        tc.show_features_sorted_by_counts(r_tweets, feature_list)
+        
+        # hardcodes primera ejecución
+        hardcodes = ['anticorrupcion', 'cambi', 'corrup', 'desmont',
+                    'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez']
+        # hardcodes segunda ejecución
+        hardcodes = ['anticorrupcion', 'cambi', 'corrup', 
+                     'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez'
+                     '#cambiosensato', '#desmontandoeltt', 
+                     'ataqu', 'campan', 'demagogi', 'derech', 'difam', 'hashtag', 'izq',
+                     'mentir', 'mied', 'nervi', 'pablemos','podemos', 'pp', 'program', 
+                     'regeneracion', 'solucion', 'transparent', 'tt']
+        
+        # vectorizar usando vocabulario=hardcodes
+        r_tweets, feature_list = tc.vectorize_vocabulary(tweets, hardcodes)
+        column_counts_vector = tc.check_columns_percent(r_tweets)
+        
+        # coger solo los tweets que tienen alguno de los hardcodes
+        tweets_hard = tc.get_tweets_with_columns(tweets, r_tweets, column_counts_vector)
+        
+        # vectorizar otra vez, solo estos tweets
+        r_tweets_hard, feature_list = tc.vectorize_vocabulary(tweets_hard, hardcodes)
+        tc.check_all_have_columns(r_tweets_hard)
+        
+        number_of_clusters = 10
+        Xdf = tc.cluster(r_tweets_hard, number_of_clusters)
+        
+        tc.cluster_summary(Xdf, number_of_clusters, tweets_hard, 'clusters_hard1.log')
+        tc.show_features_for_tweet(feature_list, Xdf.loc[41])
+        
         pass
 
 
