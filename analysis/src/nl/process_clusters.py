@@ -29,10 +29,9 @@ class TweetClustering():
     it includes:
     - chars not processed ok by stemmer/tokenizer
     - common words in this context (review ????)
-    - #desmontandoaciudadanos not added so that it can be used as a fixed feature
     '''
     stopwords_additional = ['@', ':', '?', '.', ',', '"', 'http', '#', '!', '!', '``', "''", "q", "d", "...",
-                            #"#desmontandoaciudadanos",
+                            "#desmontandoaciudadanos",
                             "#ciudadanos", "ciudadanos", "cs", "c's",
                             "ciutadans", '@ahorapodemos', '@albert_rivera', '@ciudadanoscs',
                             "albert", "rivera", ".."]
@@ -137,6 +136,8 @@ class TweetClustering():
             return 'podemos'
         if text == 'hashtag' or text == 'ht' or text == 'hastag':
             return 'hashtag'
+        if text.startswith('tranparen'):
+            return 'transparent'
         if text == 'pablemos' or text == 'potemos' or text.startswith('podemit'):
             return 'pablemos'
         if text.startswith('nevi'):
@@ -236,11 +237,20 @@ class TweetClustering():
         return column_counts_vector
             
     def get_tweets_with_columns(self, tweets, r_tweets, column_counts_vector):
+        return self._get_tweets_with_columns(tweets, r_tweets, column_counts_vector, True)
+        
+    def get_tweets_with_no_columns(self, tweets, r_tweets, column_counts_vector):
+        return self._get_tweets_with_columns(tweets, r_tweets, column_counts_vector, False)        
+
+    def _get_tweets_with_columns(self, tweets, r_tweets, column_counts_vector, with_columns):
         Xdf = pd.SparseDataFrame(r_tweets.toarray())
         Xdf['counts'] = column_counts_vector
-        tweets_wc = tweets.iloc[Xdf.loc[Xdf['counts'] > 1].index]
-        print(tweets_wc.shape)
-        return tweets_wc
+        if with_columns:
+            tweets_result = tweets.iloc[Xdf.loc[Xdf['counts'] > 0].index]
+        else:
+            tweets_result = tweets.iloc[Xdf.loc[Xdf['counts'] == 0].index]
+        print(tweets_result.shape)
+        return tweets_result
     
     def cluster(self, r_tweets, number_of_clusters=10):
         X = r_tweets.toarray()
@@ -252,7 +262,8 @@ class TweetClustering():
         Xdf['cluster'] = clusters
         return Xdf
         
-    def cluster_summary(self, Xdf, number_of_clusters, tweets, filename):
+    def cluster_summary(self, Xdf, number_of_clusters, tweets, feature_list, filename):
+        # TODO change to setenv
         f2 = open('/Users/lorenzorubio/Downloads/' + filename, mode='w')
         for cluster in range(number_of_clusters):
             print("===> cluster " + str(cluster))
@@ -261,11 +272,27 @@ class TweetClustering():
             for i in range(len(cluster_tweets.index)):
                 f2.write('(' + str(cluster) + ',' + str(cluster_tweets.index[i]) + ')' 
                          + tweets.iloc[cluster_tweets.index[i]]['text'] + '\n')
+            # analyze the most common used words
+            totals = {}
+            for i in range(len(cluster_tweets.index)):
+                features = self._get_features_for_tweet(feature_list, Xdf.loc[cluster_tweets.index[i]])
+                for f in features.iteritems():
+                    feature = f[1]
+                    if feature in totals:
+                        totals[feature] += 1
+                    else:
+                        totals[feature] = 1
+            totals_df = pd.DataFrame.from_dict(totals, 'index')
+            totals_df.columns = ['key_counts']
+            print(totals_df[totals_df['key_counts'] > 1].sort(columns=['key_counts'], ascending=False)) 
         f2.close()
     
-    def show_features_for_tweet(self, feature_list, x):
+    def _get_features_for_tweet(self, feature_list, x):
         features = pd.DataFrame(feature_list, columns=['feature'])
-        print(features.loc[x != 0, 'feature'])
+        return features.loc[x != 0, 'feature']
+        
+    def show_features_for_tweet(self, feature_list, x):
+        print(self._get_features_for_tweet(feature_list, x))
                 
 class Test(unittest.TestCase):
 
@@ -273,7 +300,7 @@ class Test(unittest.TestCase):
     def testProcess(self):
         tc = TweetClustering()
         # unos pocos tweets de CS y coger las palabras más comunes
-        tweets = tc.get_tweets(additional_label='cs', rt_threshold=6)
+        tweets = tc.get_tweets(additional_label='cs', rt_threshold=0)
         r_tweets, feature_list = tc.vectorize_tokenize(tweets, min_df=11)
         tc.show_features_sorted_by_counts(r_tweets, feature_list)
         
@@ -282,28 +309,59 @@ class Test(unittest.TestCase):
                     'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez']
         # hardcodes segunda ejecución
         hardcodes = ['anticorrupcion', 'cambi', 'corrup', 
-                     'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez'
+                     'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez',
                      '#cambiosensato', '#desmontandoeltt', 
                      'ataqu', 'campan', 'demagogi', 'derech', 'difam', 'hashtag', 'izq',
                      'mentir', 'mied', 'nervi', 'pablemos','podemos', 'pp', 'program', 
                      'regeneracion', 'solucion', 'transparent', 'tt']
+        # hardcodes tercera ejecución (dudas!!!)
+        hardcodes = ['anticorrupcion', 'cambi', 'corrup', 
+                     'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez',
+                     '#cambiosensato', '#desmontandoeltt', 
+                     'ataqu', 'campan', 'demagogi', 'derech', 'difam', 'hashtag', 'izq',
+                     'mentir', 'mied', 'nervi', 'pablemos','podemos', 'pp', 'program', 
+                     'regeneracion', 'solucion', 'transparent', 'tt',
+                     'constru', 'honradez', 'dialog', 'coherent']
+        # hardcodes cuarta ejecución (más dudas!!!)
+        hardcodes = ['anticorrupcion', 'cambi', 'corrup', 
+                     'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez',
+                     '#cambiosensato', '#desmontandoeltt', 
+                     'ataqu', 'campan', 'demagogi', 'derech', 'difam', 'hashtag', 'izq',
+                     'mentir', 'mied', 'nervi', 'pablemos','podemos', 'pp', 'program', 
+                     'regeneracion', 'solucion', 'transparent', 'tt',
+                     'constru', 'honradez', 'dialog', 'coherent',
+                     'goebbels', 'psoe']
+
         
         # vectorizar usando vocabulario=hardcodes
-        r_tweets, feature_list = tc.vectorize_vocabulary(tweets, hardcodes)
+        r_tweets, feature_list_hard = tc.vectorize_vocabulary(tweets, hardcodes)
         column_counts_vector = tc.check_columns_percent(r_tweets)
         
         # coger solo los tweets que tienen alguno de los hardcodes
         tweets_hard = tc.get_tweets_with_columns(tweets, r_tweets, column_counts_vector)
         
         # vectorizar otra vez, solo estos tweets
-        r_tweets_hard, feature_list = tc.vectorize_vocabulary(tweets_hard, hardcodes)
+        r_tweets_hard, feature_list_hard = tc.vectorize_vocabulary(tweets_hard, hardcodes)
         tc.check_all_have_columns(r_tweets_hard)
         
-        number_of_clusters = 10
-        Xdf = tc.cluster(r_tweets_hard, number_of_clusters)
+        # clusters
+        number_of_clusters = 20
+        Xdf_hard = tc.cluster(r_tweets_hard, number_of_clusters)
         
-        tc.cluster_summary(Xdf, number_of_clusters, tweets_hard, 'clusters_hard1.log')
-        tc.show_features_for_tweet(feature_list, Xdf.loc[41])
+        tc.cluster_summary(Xdf_hard, number_of_clusters, tweets_hard, feature_list_hard, 'clusters_hard1.log')
+        print(tweets_hard.shape)
+        # ver las features de un tweet
+        tc.show_features_for_tweet(feature_list_hard, Xdf_hard.loc[41])
+        
+        # vectorizar el resto de tweets
+        print(tweets.shape)
+        tweets_rest = tc.get_tweets_with_no_columns(tweets, r_tweets, column_counts_vector)
+        print(tweets_rest.shape)
+        r_tweets_rest, feature_list_rest = tc.vectorize_tokenize(tweets_rest, min_df=2)
+        tc.show_features_sorted_by_counts(r_tweets_rest, feature_list_rest)
+        
+        # ver el origen de una palabra que ha pasado por stem
+        #tc.stem_pairs['constru']
         
         pass
 
