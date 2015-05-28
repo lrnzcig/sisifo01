@@ -40,6 +40,9 @@ class TweetClustering():
                             'cuant', 'dedic', 'intent', 'mism', 'mont', 'pas', 'person', 'sal', 'xq', 'anos', 'aqui',
                             'comun', 'dej', 'dem', 'pues', 'rest', 'segu', 'tiemp', 'vay', 'cos', 'cuent', 'dan',
                             'grand', 'mir', 'nuev', 'parec', 'ven', 'acab', 'quer', 'sac',
+                            # 75% pd
+                            'list', 'llev', 'via', 'favor', 'medi', 'gust', 'met', 'mund', 'sub', 'siempr',
+                            'pag', 'llam', 'qued', 'gener', 'mal', 'men', 'tambi', 'piens', 'amig',
                             'albert', 'river', '..']
     
     def __init__(self):
@@ -155,8 +158,7 @@ class TweetClustering():
         if 'centro' in text and 'izq' in text:
             return 'centroizquierda'
         if 'ciudada' in text or 'ciutada' in text or text == 'cs' or text == "c's":
-            if not text.startswith('#'):
-                return 'ciudadan'
+            return 'ciudadan'
         if 'derech' in text:
             return 'derech'
         if 'falang' in text or 'falanj' in text or 'fascist' in text \
@@ -352,18 +354,9 @@ class TweetClustering():
                 
 class Test(unittest.TestCase):
 
-
-    def testProcess(self):
-        tc = TweetClustering()
-        # unos pocos tweets de CS y coger las palabras más comunes
-        tweets = tc.get_tweets(additional_label='cs', rt_threshold=0)
-        r_tweets, feature_list = tc.vectorize_tokenize(tweets, min_df=11)
-        tc.show_features_sorted_by_counts(r_tweets, feature_list)
-        
-        hardcodes = tc.get_most_frequent_terms(r_tweets, feature_list, percent=75)
-        print(hardcodes)
-        
-        '''
+    '''
+    HARCODES A MANO CS
+    
         # hardcodes primera ejecución
         hardcodes = ['anticorrupcion', 'cambi', 'corrup', 'desmont',
                     'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez']
@@ -393,6 +386,17 @@ class Test(unittest.TestCase):
                      'goebbels', 'psoe']
         '''
 
+
+    def clustering(self, label, rt_threshold, number_of_clusters, file_name, delete_all_cluster_lists=False):
+        tc = TweetClustering()
+        tweets = tc.get_tweets(additional_label=label, rt_threshold=rt_threshold)
+        r_tweets, feature_list = tc.vectorize_tokenize(tweets, min_df=11)
+        tc.show_features_sorted_by_counts(r_tweets, feature_list)
+        
+        hardcodes = tc.get_most_frequent_terms(r_tweets, feature_list, percent=75)
+        print(hardcodes)
+        print(len(hardcodes))
+        
         
         # vectorizar usando vocabulario=hardcodes
         r_tweets, feature_list_hard = tc.vectorize_vocabulary(tweets, hardcodes)
@@ -406,18 +410,17 @@ class Test(unittest.TestCase):
         tc.check_all_have_columns(r_tweets_hard)
         
         # clusters
-        number_of_clusters = 20
         Xdf_hard = tc.cluster(r_tweets_hard, number_of_clusters)
         
-        tweet_ids_by_cluster = tc.cluster_summary(Xdf_hard, number_of_clusters, tweets_hard, feature_list_hard, 'clusters_cs.log')
+        tweet_ids_by_cluster = tc.cluster_summary(Xdf_hard, number_of_clusters, tweets_hard, feature_list_hard, file_name)
         print(tweets_hard.shape)
         # ver las features de un tweet
         tc.show_features_for_tweet(feature_list_hard, Xdf_hard.loc[41])
         
         # insertar en bbdd
-        manager = ltc.Manager(user='SISIFO01_AUCOMMAN', alchemy_echo=False, delete_all_cluster_lists=True)
+        manager = ltc.Manager(user='SISIFO01_AUCOMMAN', alchemy_echo=False, delete_all_cluster_lists=delete_all_cluster_lists)
         for cluster in range(number_of_clusters):
-            manager.dump(tweet_ids_by_cluster[cluster], "cs", cluster)
+            manager.dump(tweet_ids_by_cluster[cluster], label, cluster)
                     
         # vectorizar el resto de tweets
         print(tweets.shape)
@@ -429,6 +432,10 @@ class Test(unittest.TestCase):
         # ver el origen de una palabra que ha pasado por stem
         #tc.stem_pairs['constru']
         
+
+    def testProcess(self):
+        self.clustering("cs", rt_threshold=0, number_of_clusters=20, file_name='clusters_cs.log', delete_all_cluster_lists=True)
+        self.clustering("pd", rt_threshold=1, number_of_clusters=40, file_name='clusters_pd.log')
         pass
 
 
