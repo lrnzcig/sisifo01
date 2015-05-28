@@ -7,8 +7,7 @@ import pandas as pd
 from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from os.path import expanduser
-import yaml
+import schema_aux.utils as utils
 
 Base = declarative_base()
 
@@ -65,11 +64,9 @@ class Manager():
     fdist_clean_df.sort('count', ascending=False)[:50]
     '''
     
-    def __init__(self, delete_all_cluster_lists=False):
+    def __init__(self, user=None, alchemy_echo=True, delete_all_cluster_lists=False):
         # export PATH or pass as an argument!
-        properties = yaml.load(open(expanduser("~") + '/.sisifo/connection.properties'))
-        database = properties['database']
-        url = database['dialect'] + "://" + database['user'] + ":" + database['password'] + '@' + database['host'] + "/" + database['sid']
+        url = utils.get_database_url_sql_alchemy(user, alchemy_echo)
         self.engine = create_engine(url, echo=True)
         Base.metadata.create_all(self.engine)
         if (delete_all_cluster_lists == True):

@@ -6,8 +6,7 @@ Created on 15 de abr. de 2015
 from sqlalchemy import Column, Integer, String, Date, SmallInteger, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from os.path import expanduser
-import yaml
+import schema_aux.utils as utils
 from schema_aux.UniqueMixin import UniqueMixin
 from schema_aux.CachedMixin import CachedMixin
 
@@ -194,24 +193,7 @@ class Manager():
     '''
     
     def __init__(self, user=None, alchemy_echo=True):
-        '''
-        user: alternative user for ddbb connection. If set, overrides connection.properties
-        alchemy_echo: if False, disables all messages from sqlalchemy
-        '''
-
-        '''
-        solve encoding: env variable to be set in the client machine
-        controlled here by program - TODO should not overwrite if it is set
-        '''
-        import os
-        os.environ['NLS_LANG'] = 'SPANISH_SPAIN.UTF8'
-        
-        # export PATH or pass as an argument!
-        properties = yaml.load(open(expanduser("~") + '/.sisifo/connection.properties'))
-        database = properties['database']
-        if user == None:
-            user = database['user']
-        url = database['dialect'] + "://" + user + ":" + database['password'] + '@' + database['host'] + "/" + database['sid']
+        url = utils.get_database_url_sql_alchemy(user, alchemy_echo)
         self.engine = create_engine(url, echo=alchemy_echo)
         Base.metadata.create_all(self.engine)
 

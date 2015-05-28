@@ -9,6 +9,7 @@ import unittest
 import pandas as pd
 import numpy as np
 from schema_aux import list_of_user_clustering as luc
+from schema_aux import list_of_tweet_clustering as ltc
 from schema_aux import twitter_schema as sch
 from nltk.tokenize.casual import TweetTokenizer
 from nltk.corpus import stopwords as nltk_stopwords
@@ -32,9 +33,14 @@ class TweetClustering():
     '''
     stopwords_additional = ['@', ':', '?', '.', ',', '"', 'http', '#', '!', '!', '``', "''", "q", "d", "...",
                             "#desmontandoaciudadanos",
-                            "#ciudadanos", "ciudadanos", "cs", "c's",
-                            "ciutadans", '@ahorapodemos', '@albert_rivera', '@ciudadanoscs',
-                            "albert", "rivera", ".."]
+                            "ciudadan", '@ahorapodemos', '@albert_rivera', '@ciudadanoscs',
+                            # 60% cs
+                            "desmont", 'espan', 'number', 'pued', 'buen', 'graci',
+                            # 75% cs
+                            'cuant', 'dedic', 'intent', 'mism', 'mont', 'pas', 'person', 'sal', 'xq', 'anos', 'aqui',
+                            'comun', 'dej', 'dem', 'pues', 'rest', 'segu', 'tiemp', 'vay', 'cos', 'cuent', 'dan',
+                            'grand', 'mir', 'nuev', 'parec', 'ven', 'acab', 'quer', 'sac',
+                            'albert', 'river', '..']
     
     def __init__(self):
         self.session = self.get_session()
@@ -132,6 +138,12 @@ class TweetClustering():
             return 'deber'
         if text.startswith('financ'):
             return 'financ'
+        if text.startswith('comunist'):
+            return 'comunist'
+        if text.startswith('nevi'):
+            return 'nervi'
+        if text.startswith('ataqu'):
+            return 'atac'
         if 'podemos' in text and 'desmontandoapodemos' not in text and 'podemostienemiedo' not in text:
             return 'podemos'
         if text == 'hashtag' or text == 'ht' or text == 'hastag':
@@ -140,8 +152,6 @@ class TweetClustering():
             return 'transparent'
         if text == 'pablemos' or text == 'potemos' or text.startswith('podemit'):
             return 'pablemos'
-        if text.startswith('nevi'):
-            return 'nervi'
         if 'centro' in text and 'izq' in text:
             return 'centroizquierda'
         if 'ciudada' in text or 'ciutada' in text or text == 'cs' or text == "c's":
@@ -151,7 +161,7 @@ class TweetClustering():
             return 'derech'
         if 'falang' in text or 'falanj' in text or 'fascist' in text \
             or 'franquism' in text or 'franquist' in text or 'facha' in text or 'franco' in text \
-            or 'nazi' in text:
+            or 'nazi' in text or 'goebbels' in text:
             return 'falang'
         if 'racist' in text or 'racism' in text or 'xenof' in text:
             return 'racist'
@@ -264,17 +274,21 @@ class TweetClustering():
         
     def cluster_summary(self, Xdf, number_of_clusters, tweets, feature_list, filename):
         # TODO change to setenv
+        tweets_by_cluster = {}
         f2 = open('/Users/lorenzorubio/Downloads/' + filename, mode='w')
         for cluster in range(number_of_clusters):
             print("===> cluster " + str(cluster))
             cluster_tweets = Xdf.loc[Xdf['cluster'] == cluster]
             print("number of tweets: " + str(len(cluster_tweets.index)))
+            
+            tweets_by_cluster[cluster] = set()
+            totals = {}
             for i in range(len(cluster_tweets.index)):
                 f2.write('(' + str(cluster) + ',' + str(cluster_tweets.index[i]) + ')' 
                          + tweets.iloc[cluster_tweets.index[i]]['text'] + '\n')
-            # analyze the most common used words
-            totals = {}
-            for i in range(len(cluster_tweets.index)):
+                # add the tweet id to Xdf, so that it is available for ddbb
+                tweets_by_cluster[cluster].add(tweets.iloc[cluster_tweets.index[i]]['id']) 
+                # analyze the most common used words
                 features = self._get_features_for_tweet(feature_list, Xdf.loc[cluster_tweets.index[i]])
                 for f in features.iteritems():
                     feature = f[1]
@@ -282,10 +296,14 @@ class TweetClustering():
                         totals[feature] += 1
                     else:
                         totals[feature] = 1
+            # print common words
             totals_df = pd.DataFrame.from_dict(totals, 'index')
             totals_df.columns = ['key_counts']
-            print(totals_df[totals_df['key_counts'] > 1].sort(columns=['key_counts'], ascending=False)) 
+            totals_df_sorted = totals_df[totals_df['key_counts'] > 1].sort(columns=['key_counts'], ascending=False) 
+            print(totals_df_sorted)
+            f2.write(str(totals_df_sorted) + '\n')
         f2.close()
+        return tweets_by_cluster
     
     def _get_features_for_tweet(self, feature_list, x):
         features = pd.DataFrame(feature_list, columns=['feature'])
@@ -293,6 +311,44 @@ class TweetClustering():
         
     def show_features_for_tweet(self, feature_list, x):
         print(self._get_features_for_tweet(feature_list, x))
+        
+    def get_most_frequent_terms(self, r_tweets, feature_list, percent=100):
+        rows, columns = r_tweets.nonzero()
+        removed_columns = set()
+        removed_rows = set()
+        while len(removed_rows) < (r_tweets.shape[0] * percent / 100):
+            # i.e. while a percentage the tweets is covered by the selected terms
+            
+            # 1. get distibution of words
+            distribution = {}
+            for row, column in zip(rows, columns):
+                if row in removed_rows:
+                    continue
+                if column in distribution:
+                    distribution[column] += 1
+                else:
+                    distribution[column] = 1
+            
+            # 2. get the maximum value
+            if distribution == {}:
+                # no more terms found
+                break                
+            ddf = pd.DataFrame.from_dict(distribution, 'index')
+            ddf.columns = ['column_counts']
+            ddf = ddf[ddf['column_counts'] > 1]
+            if ddf.shape[0] == 0:
+                # no more terms present in at least 2 rows
+                break
+            max_column = ddf.sort(columns=['column_counts'], ascending=False).index[0]
+            
+            # 3. remove rows with that column
+            removed_columns.add(max_column)
+            for row, column in zip(rows, columns):
+                if column in removed_columns:
+                    removed_rows.add(row)
+        
+        return [feature_list[x] for x in removed_columns]
+                    
                 
 class Test(unittest.TestCase):
 
@@ -304,6 +360,10 @@ class Test(unittest.TestCase):
         r_tweets, feature_list = tc.vectorize_tokenize(tweets, min_df=11)
         tc.show_features_sorted_by_counts(r_tweets, feature_list)
         
+        hardcodes = tc.get_most_frequent_terms(r_tweets, feature_list, percent=75)
+        print(hardcodes)
+        
+        '''
         # hardcodes primera ejecución
         hardcodes = ['anticorrupcion', 'cambi', 'corrup', 'desmont',
                     'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez']
@@ -331,6 +391,7 @@ class Test(unittest.TestCase):
                      'regeneracion', 'solucion', 'transparent', 'tt',
                      'constru', 'honradez', 'dialog', 'coherent',
                      'goebbels', 'psoe']
+        '''
 
         
         # vectorizar usando vocabulario=hardcodes
@@ -348,11 +409,16 @@ class Test(unittest.TestCase):
         number_of_clusters = 20
         Xdf_hard = tc.cluster(r_tweets_hard, number_of_clusters)
         
-        tc.cluster_summary(Xdf_hard, number_of_clusters, tweets_hard, feature_list_hard, 'clusters_hard1.log')
+        tweet_ids_by_cluster = tc.cluster_summary(Xdf_hard, number_of_clusters, tweets_hard, feature_list_hard, 'clusters_cs.log')
         print(tweets_hard.shape)
         # ver las features de un tweet
         tc.show_features_for_tweet(feature_list_hard, Xdf_hard.loc[41])
         
+        # insertar en bbdd
+        manager = ltc.Manager(user='SISIFO01_AUCOMMAN', alchemy_echo=False, delete_all_cluster_lists=True)
+        for cluster in range(number_of_clusters):
+            manager.dump(tweet_ids_by_cluster[cluster], "cs", cluster)
+                    
         # vectorizar el resto de tweets
         print(tweets.shape)
         tweets_rest = tc.get_tweets_with_no_columns(tweets, r_tweets, column_counts_vector)
