@@ -27,6 +27,15 @@ class TweetLoader():
                         'verified']
     
     default_regs_per_commit = 10000
+    
+    # cache keys
+    tweet_key = sch.Tweet.__tablename__
+    user_key = sch.User.__tablename__
+    hashtag_key = sch.Hashtag.__tablename__
+    tweet_url_key = sch.TweetUrl.__tablename__
+    user_mention_key = sch.UserMention.__tablename__
+    user_url_key = sch.UserMention.__tablename__
+    
 
     def __init__(self):
         self.logger = logging.getLogger()
@@ -36,9 +45,16 @@ class TweetLoader():
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
 
-        # one session for the full load to make use of the cache
-        self.manager = sch.Manager(alchemy_echo=False)
+        self.manager = sch.Manager(user='SISIFO01_AUCOMMAN', alchemy_echo=False)
         self.session = self.manager.get_session()
+        
+        self.init_cache()
+        self.show_memory_usage = False
+        
+    def init_cache(self):
+        self.cache = {self.tweet_key : {}, self.user_key : {},
+                      self.hashtag_key : {}, self.tweet_url_key : {},
+                      self.user_mention_key : {}, self.user_url_key : {} }
 
     def load_all_entities(self, path, filename):
         self.tweet_loader(path, filename, regs_per_commit=self.default_regs_per_commit)
@@ -71,11 +87,12 @@ class TweetLoader():
         
         orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=0, header=None, encoding="utf8")
         
+        cache = self.cache[self.tweet_key]
         counter = 0
         for tweet in tweets.iterrows():
             created_at = datetime.strptime(tweet[1][0], '%a %b %d %H:%M:%S +0000 %Y').replace(tzinfo=UTC)
             tweet_id = tweet[0]
-            old_tweet = sch.Tweet.get(self.session, id=tweet_id)
+            old_tweet = sch.Tweet.get(self.session, cache, id=tweet_id)
             if old_tweet:
                 if old_tweet.retweet_count < tweet[1][5] or old_tweet.favorite_count < tweet[1][1]:
                     # it is more recent
@@ -93,7 +110,7 @@ class TweetLoader():
                 # this is a retweet
                 retweet = True
                 original_tweet_id = original_tweet_df[3]
-                original_tweet = sch.Tweet.get(self.session, id=original_tweet_id)
+                original_tweet = sch.Tweet.get(self.session, cache, id=original_tweet_id)
                 if not original_tweet:
                     # insert it already
                     orig_created_at = datetime.strptime(original_tweet_df[1], '%a %b %d %H:%M:%S +0000 %Y').replace(tzinfo=UTC)
@@ -101,14 +118,14 @@ class TweetLoader():
                     if original_tweet_df[8]:
                         # the original is numpy.bool_ and SQLAlchemy does not accept it
                         truncated = True
-                    sch.Tweet.as_cached(self.session, created_at=orig_created_at, favorite_count=original_tweet_df[2],
+                    sch.Tweet.as_cached(self.session, cache, created_at=orig_created_at, favorite_count=original_tweet_df[2],
                                         id=original_tweet_id, in_reply_to_status_id=original_tweet_df[4],
                                         in_reply_to_user_id=original_tweet_df[5], retweet_count=original_tweet_df[6],
                                         retweet=False, text=original_tweet_df[7], truncated=truncated,
                                         user_id=original_tweet_df[9], retweeted_id=None, retweeted_user_id=None)
                 retweeted_id = original_tweet_id
                 retweeted_user_id = original_tweet_df[9]
-            sch.Tweet.as_cached(self.session, created_at=created_at, favorite_count=tweet[1][1],
+            sch.Tweet.as_cached(self.session, cache, created_at=created_at, favorite_count=tweet[1][1],
                                 id=tweet_id, in_reply_to_status_id=tweet[1][3],
                                 in_reply_to_user_id=tweet[1][4], retweet_count=tweet[1][5],
                                 retweet=retweet, text=tweet[1][6], truncated=tweet[1][7],
@@ -134,6 +151,8 @@ class TweetLoader():
         orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=1, header=None, encoding="utf8")
         orig_tweets.columns = ['tweet_id'] + self.user_column_list
         
+        cache = self.cache[self.user_key]
+        
         # drop duplicates by and concat into tot_users
         users['index'] = users.index
         users.drop_duplicates(subset=['index'], take_last = True, inplace=True)
@@ -153,7 +172,7 @@ class TweetLoader():
         counter = 0
         for user in tot_users.iterrows():
             user_id = user[0]
-            old_user = sch.User.get(self.session, id=user_id)
+            old_user = sch.User.get(self.session, cache, id=user_id)
             if old_user:
                 if old_user.statuses_count < user[1]['statuses_count']:
                     # assumed: if the user twitted more, there could be modifications
@@ -172,7 +191,7 @@ class TweetLoader():
                     old_user.verified = user[1]['verified']
                 continue
             created_at = datetime.strptime(user[1]['created_at'], '%a %b %d %H:%M:%S +0000 %Y').replace(tzinfo=UTC)
-            user = sch.User.as_cached(self.session, id=user_id, screen_name=user[1]['screen_name'], created_at=created_at,
+            user = sch.User.as_cached(self.session, cache, id=user_id, screen_name=user[1]['screen_name'], created_at=created_at,
                             contributors_enabled=user[1]['contributors_enabled'], description=user[1]['description'],
                             favourites_count = user[1]['favourites_count'], followers_count = user[1]['followers_count'],
                             friends_count = user[1]['friends_count'], is_translator = user[1]['is_translator'],
@@ -180,7 +199,7 @@ class TweetLoader():
                             protected = user[1]['protected'], statuses_count = user[1]['statuses_count'], url=user[1]['url'],
                             verified = user[1]['verified'])
             counter += 1
-            self._commit(counter)
+            self._commit(counter, regs_per_commit)
         self._commit()
 
     
@@ -191,11 +210,13 @@ class TweetLoader():
         hashtags = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=None, encoding="utf8")
         # TODO hashtags from retweets 
         
+        cache = self.cache[self.hashtag_key]
+
         # remove duplicates
         hashtags.drop_duplicates(inplace=True)
         counter = 0
         for hashtag in hashtags.iterrows():
-            hashtag = sch.Hashtag.as_unique(self.session, tweet_id=hashtag[1][0], hashtag=hashtag[1][1])
+            hashtag = sch.Hashtag.as_unique(self.session, cache, tweet_id=hashtag[1][0], hashtag=hashtag[1][1])
             counter += 1
             if regs_per_commit and counter % regs_per_commit == 0:
                 self._commit(counter)
@@ -207,11 +228,13 @@ class TweetLoader():
                           ['id'], 'urls', ['url'])
         tweeturls = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=None, encoding="utf8")
 
+        cache = self.cache[self.tweet_url_key]
+
         # remove duplicates
         tweeturls.drop_duplicates(inplace=True)
         counter = 0
         for tweeturl in tweeturls.iterrows():
-            tweeturl = sch.TweetUrl.as_unique(self.session, tweet_id=tweeturl[1][0], url=tweeturl[1][1])
+            tweeturl = sch.TweetUrl.as_unique(self.session, cache, tweet_id=tweeturl[1][0], url=tweeturl[1][1])
             counter += 1
             self._commit(counter)
         self._commit()
@@ -222,15 +245,18 @@ class TweetLoader():
                           ['id'], 'user_mentions', ['id'])
         usermentions = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=None, encoding="utf8")
 
+        cache = self.cache[self.user_mention_key]
+        tweet_cache = self.cache[self.tweet_key]
+
         # remove duplicates
         usermentions.drop_duplicates(inplace=True)
         counter = 0
         for usermention in usermentions.iterrows():
             tweet_id = usermention[1][0]
-            old_tweet = sch.Tweet.get(self.session, id=tweet_id)
+            old_tweet = sch.Tweet.get(self.session, tweet_cache, id=tweet_id)
             if old_tweet == None:
                 raise RuntimeError("Incongruent data - there's user mentions for a tweet that does not exist. Tweet id: " + str(tweet_id))
-            usermention = sch.UserMention.as_unique(self.session, tweet_id=tweet_id, source_user_id=old_tweet.user_id, 
+            usermention = sch.UserMention.as_unique(self.session, cache, tweet_id=tweet_id, source_user_id=old_tweet.user_id, 
                                           target_user_id=usermention[1][1])
             counter += 1
             self._commit(counter)
@@ -246,12 +272,14 @@ class TweetLoader():
             return
         userurls = pd.DataFrame.from_csv(temp_file, index_col=None, header=None, encoding="utf8")
 
+        cache = self.cache[self.user_url_key]
+
         # remove duplicates
         userurls.drop_duplicates(inplace=True)
 
         counter = 0
         for userurl in userurls.iterrows():
-            userurl = sch.TweetUrl.as_unique(self.session, tweet_id=userurl[1][0], url=userurl[1][1])
+            userurl = sch.TweetUrl.as_unique(self.session, cache, tweet_id=userurl[1][0], url=userurl[1][1])
             counter += 1
             self._commit(counter)
         self._commit()
@@ -263,12 +291,9 @@ class TweetLoader():
         if regs and counter % regs == 0:
             self.session.commit()
             self.session.expunge_all()
-            # get the cache and pass it to next session - not good results
-            #cache = getattr(self.session, '_u_cache', None)
             self.session.close()
             self.session = self.manager.get_session()
-            #self.session._u_cache = cache
-            if counter % 15000 == 0:
+            if self.show_memory_usage == True and counter % 15000 == 0:
                 self.memory_usage("counter = " + str(counter))
         
     def get_virtual_memory_usage_kb(self):
@@ -300,9 +325,7 @@ class Test(unittest.TestCase):
         dumper.load_all_entities(path, filename)
         
         
-        '''
-        dumper.user_loader(path, filename, regs_per_commit=10)
-        '''
+        #dumper.user_loader(path, filename, regs_per_commit=1)
         pass
 
 

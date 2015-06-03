@@ -7,18 +7,18 @@ modified for implementing a cache for not UniqueMixin objects
 '''
 import CachedMixin
 
-def _unique(session, cls, hashfunc, queryfunc, constructor, arg, kw):
+def _unique(session, cache, cls, hashfunc, queryfunc, constructor, arg, kw):
     '''
     1. tries to find the object in cache (the cache will create a new one if
         it does not exist) 
     2. if not in cache, it creates a new object and adds it to the session
         (and to the cache of course)
     '''
-    obj = CachedMixin._get_from_cache(session, cls, hashfunc, queryfunc, arg, kw)
+    obj = CachedMixin._get_from_cache(session, cache, cls, hashfunc, queryfunc, arg, kw)
     if not obj:
         obj = constructor(*arg, **kw)
         session.add(obj)
-        CachedMixin._add_to_cache(session, cls, hashfunc, arg, kw, obj)
+        CachedMixin._add_to_cache(session, cache, cls, hashfunc, arg, kw, obj)
     return obj
 
     
@@ -32,9 +32,10 @@ class UniqueMixin(object):
         raise NotImplementedError()
 
     @classmethod
-    def as_unique(cls, session, *arg, **kw):
+    def as_unique(cls, session, cache, *arg, **kw):
         return _unique(
                     session,
+                    cache,
                     cls,
                     cls.unique_hash,
                     cls.unique_filter,

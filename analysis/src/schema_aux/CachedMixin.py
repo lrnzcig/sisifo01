@@ -4,15 +4,15 @@ Created on 5 de may. de 2015
 @author: lorenzorubio
 '''
 
-def _get_from_cache(session, cls, hashfunc, queryfunc, arg, kw):
+def _get_from_cache(session, cache, cls, hashfunc, queryfunc, arg, kw):
     '''
     1. gets object from cache
     2. if it does not exist, returns None
     '''
-    cache = _get_cache(session)
-
-    key = (cls, hashfunc(*arg, **kw))
-    if key in cache:
+    key = None
+    if cache != None:
+        key = (cls, hashfunc(*arg, **kw))
+    if key != None and key in cache:
         # in case object has been flushed
         obj = cache[key]
         session.add(obj)
@@ -24,20 +24,15 @@ def _get_from_cache(session, cls, hashfunc, queryfunc, arg, kw):
             obj = q.first()
             if not obj:
                 return None
-        cache[key] = obj
+        if cache != None:
+            cache[key] = obj
         session.add(obj)
         return obj
 
-def _add_to_cache(session, cls, hashfunc, arg, kw, obj):
-    cache = _get_cache(session)
+def _add_to_cache(session, cache, cls, hashfunc, arg, kw, obj):
     key = (cls, hashfunc(*arg, **kw))
-    cache[key] = obj
-
-def _get_cache(session):
-    cache = getattr(session, '_u_cache', None)
-    if cache is None:
-        session._u_cache = cache = {}
-    return cache
+    if cache != None:
+        cache[key] = obj
 
 class CachedMixin(object):
     
@@ -50,12 +45,13 @@ class CachedMixin(object):
         raise NotImplementedError()
 
     @classmethod
-    def get(cls, session, *arg, **kw):
+    def get(cls, session, cache, *arg, **kw):
         '''
         gets object from the cache/ddbb, does not create if it does not exist 
         '''
         return _get_from_cache(
                     session,
+                    cache,
                     cls,
                     cls.unique_hash,
                     cls.unique_filter,
@@ -63,12 +59,12 @@ class CachedMixin(object):
                )
 
     @classmethod
-    def as_cached(cls, session, *arg, **kw):
+    def as_cached(cls, session, cache, *arg, **kw):
         '''
         create object and add to the cache
         '''
         obj = cls(*arg, **kw)
         session.add(obj)
-        _add_to_cache(session, cls, cls.unique_hash, arg, kw, obj)
+        _add_to_cache(session, cache, cls, cls.unique_hash, arg, kw, obj)
 
     

@@ -87,7 +87,7 @@ class Hashtag(UniqueMixin, Base):
     
     @classmethod
     def unique_hash(cls, tweet_id, hashtag):
-        return str(tweet_id) + hashtag
+        return hash(str(tweet_id) + hashtag)
 
     @classmethod
     def unique_filter(cls, query, tweet_id, hashtag):
@@ -108,7 +108,7 @@ class TweetUrl(UniqueMixin, Base):
 
     @classmethod
     def unique_hash(cls, tweet_id, url):
-        return str(tweet_id) + url
+        return hash(str(tweet_id) + url)
 
     @classmethod
     def unique_filter(cls, query, tweet_id, url):
@@ -131,7 +131,7 @@ class UserMention(UniqueMixin, Base):
 
     @classmethod
     def unique_hash(cls, tweet_id, source_user_id, target_user_id):
-        return str(tweet_id) + str(source_user_id) + str(target_user_id)
+        return hash(str(tweet_id) + str(source_user_id) + str(target_user_id))
 
     @classmethod
     def unique_filter(cls, query, tweet_id, source_user_id, target_user_id):
@@ -154,7 +154,7 @@ class UserUrl(UniqueMixin, Base):
     
     @classmethod
     def unique_hash(cls, user_id, url):
-        return str(user_id) + url
+        return hash(str(user_id) + url)
 
     @classmethod
     def unique_filter(cls, query, user_id, url):
@@ -179,7 +179,7 @@ class Follower(UniqueMixin, Base):
 
     @classmethod
     def unique_hash(cls, user_id, followed_user_id):
-        return str(user_id) + str(followed_user_id)
+        return hash(str(user_id) + str(followed_user_id))
 
     @classmethod
     def unique_filter(cls, query, user_id, followed_user_id):
