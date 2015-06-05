@@ -24,7 +24,7 @@ class TweetLoader():
     user_column_list = ['created_at', 'contributors_enabled', 'description', 'favourites_count',
                         'followers_count', 'friends_count', 'is_translator', 'listed_count',
                         'location', 'name', 'protected', 'screen_name', 'statuses_count', 'url',
-                        'verified']
+                        'verified', 'profile_link_color']
     
     default_regs_per_commit = 10000
     
@@ -45,7 +45,8 @@ class TweetLoader():
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
 
-        self.manager = sch.Manager(user='SISIFO01_AUCOMMAN', alchemy_echo=False)
+        #self.manager = sch.Manager(user='SISIFO01_AUCOMMAN', alchemy_echo=False)
+        self.manager = sch.Manager(alchemy_echo=False)
         self.session = self.manager.get_session()
         
         self.init_cache()
@@ -189,6 +190,7 @@ class TweetLoader():
                     old_user.statuses_count = user[1]['statuses_count']
                     old_user.url = user[1]['url']
                     old_user.verified = user[1]['verified']
+                    old_user.profile_link_color = user[1]['profile_link_color']
                 continue
             created_at = datetime.strptime(user[1]['created_at'], '%a %b %d %H:%M:%S +0000 %Y').replace(tzinfo=UTC)
             user = sch.User.as_cached(self.session, cache, id=user_id, screen_name=user[1]['screen_name'], created_at=created_at,
@@ -197,7 +199,7 @@ class TweetLoader():
                             friends_count = user[1]['friends_count'], is_translator = user[1]['is_translator'],
                             listed_count = user[1]['listed_count'], location = user[1]['location'], name = user[1]['name'],
                             protected = user[1]['protected'], statuses_count = user[1]['statuses_count'], url=user[1]['url'],
-                            verified = user[1]['verified'])
+                            verified = user[1]['verified'], profile_link_color = user[1]['profile_link_color'])
             counter += 1
             self._commit(counter, regs_per_commit)
         self._commit()

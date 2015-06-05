@@ -59,6 +59,7 @@ class User(CachedMixin, Base):
     url = Column(String(1024))
     verified = Column(SmallInteger)
     withheld = Column(SmallInteger)
+    profile_link_color = Column(String(6))
 
     def __repr__(self):
         return "<tuser(id='%s', screen_name='%s')>" % (
