@@ -41,14 +41,21 @@ class TweetClustering():
                             # 75% cs
                             'cuant', 'dedic', 'intent', 'mism', 'mont', 'pas', 'person', 'sal', 'xq', 'anos', 'aqui',
                             'comun', 'dej', 'dem', 'pues', 'rest', 'segu', 'tiemp', 'vay', 'cos', 'cuent', 'dan',
-                            'grand', 'mir', 'nuev', 'parec', 'ven', 'acab', 'quer', 'sac',
+                            'grand', 'mir', 'nuev', 'parec', 'ven', 'acab', 'quer', 'sac', 'sum', '@s', 'sof', 'dam',
                             # 75% pd
                             'list', 'llev', 'via', 'favor', 'medi', 'gust', 'met', 'mund', 'sub', 'siempr',
                             'pag', 'llam', 'qued', 'gener', 'mal', 'men', 'tambi', 'piens', 'amig',
+                            'man', 'aunqu', 'hol', 'pan', 'ojo', 've', 'pen', 'senor',
                             # add pd
                             'val', '@zurine3', 'agu', 'tont', '#felizlunes', '@youtube', 'dig', 'hech',
                             # nc
                             'hoy', 'imag', 'mes', 'pon', 'cad', 'esper', 'fot', 'vol', 'can', 'aun', 'cas', 'tom', 'roj',
+                            'algui', 'busc', 'color', 'conoc', 'cuid', 'curios', 'demuestr', 'despu', 'detr', 'entiend',
+                            'explic', 'facil', 'habi', 'invent', 'madr', 'maner', 'necesit', 'nunc', 'sep', 'vam', 'vien',
+                            'carg', 'dos', 'veo', 'viej', 'sabi', 'viv', 'pens', 'product', 'siti', 'quereis', 'verl',
+                            'pal', 'noch', 'segund', 'des', 'suen', 'rus', 'teni', 'empiez', 'enter', 'mostr', 'piez',
+                            'amb', 'azul', 'realment',
+                            # generales
                             'albert', 'river', '..']
     
     def __init__(self):
@@ -175,8 +182,6 @@ class TweetClustering():
             return 'democra'
         if text.startswith('descalif'):
             return 'descalif'
-        if text.startswith('deber'):
-            return 'deber'
         if text.startswith('financ'):
             return 'financ'
         if text.startswith('comunist'):
@@ -185,6 +190,18 @@ class TweetClustering():
             return 'nervi'
         if text.startswith('ataqu'):
             return 'atac'
+        if text.startswith('votante'):
+            return 'vot'
+        if text.startswith('naranjit'):
+            return 'naranj'
+        if text.startswith('propon'):
+            return 'propuest'
+        if text.startswith('mentir'):
+            # stemmer conf 'mente'
+            return 'mentir'
+        if text.startswith('cargo'):
+            # stemmer conf 'cargado'
+            return 'cargo'
         if 'podemos' in text and 'desmontandoapodemos' not in text and 'podemostienemiedo' not in text:
             return 'podemos'
         if text == 'hashtag' or text == 'ht' or text == 'hastag':
@@ -212,6 +229,9 @@ class TweetClustering():
         if 'venez' in text or text.startswith('chav') or text.startswith('bolivar')\
             or text.startswith('maduro'):
             return 'venez'
+        if 'madrid' in text:
+            # gets confused with "madre"
+            return 'madrid'
         if text == '#elcambiocs' or text == '#elcambiosensato' or text== '#cambiosensato' \
             or text == '#cuidadanoscumple':
             return '#cambiosensato'
@@ -431,7 +451,7 @@ class Test(unittest.TestCase):
             tweets = tc.get_tweets_not_classified(rt_threshold=rt_threshold)
         else:
             tweets = tc.get_tweets_user_clustering(additional_label=label, rt_threshold=rt_threshold)
-        r_tweets, feature_list = tc.vectorize_tokenize(tweets, min_df=11)
+        r_tweets, feature_list = tc.vectorize_tokenize(tweets, min_df=2)    # i.e. at least in 2 documents
         tc.show_features_sorted_by_counts(r_tweets, feature_list)
         
         hardcodes = tc.get_most_frequent_terms(r_tweets, feature_list, percent=75)
@@ -477,9 +497,9 @@ class Test(unittest.TestCase):
         
 
     def testProcess(self):
-        self.clustering('clusters_cs.log', label="cs", rt_threshold=0, number_of_clusters=20, delete_all_cluster_lists=True)
-        self.clustering('clusters_nc.log', rt_threshold=0, number_of_clusters=20)
-        self.clustering('clusters_pd_20.log', label="pd", rt_threshold=1, number_of_clusters=20)
+        self.clustering('clusters_cs_30.log', label="cs", rt_threshold=0, number_of_clusters=30, delete_all_cluster_lists=True)
+        self.clustering('clusters_nc_40.log', rt_threshold=0, number_of_clusters=40)
+        self.clustering('clusters_pd_40.log', label="pd", rt_threshold=1, number_of_clusters=40)
         pass
 
 
