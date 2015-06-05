@@ -12,6 +12,7 @@ from schema_aux import list_of_user_clustering as luc
 from schema_aux import list_of_tweet_clustering as ltc
 from schema_aux import list_of_tweet_jaccard as ltj
 from schema_aux import twitter_schema as sch
+from sqlalchemy import distinct
 from nltk.tokenize.casual import TweetTokenizer
 from nltk.corpus import stopwords as nltk_stopwords
 from nltk.stem import SnowballStemmer
@@ -68,15 +69,17 @@ class TweetClustering():
     gets tweets using a join to user clustering
     '''
     def get_tweets_user_clustering(self, cluster_label='belief_prop', additional_label='cs', rt_threshold=0):
+        subq_retweeted = self._get_retweeted_subquery()
         # subquery for excluding jaccard-duplicate tweets
-        subquery = self._get_jaccard_distance_subquery()
+        subq_jaccard = self._get_jaccard_distance_subquery()
         # tweets for classified users
         q = self.session.query(sch.Tweet) \
             .filter(sch.Tweet.retweet == False).filter(sch.Tweet.retweet_count >= rt_threshold) \
+            .filter(sch.Tweet.id.in_(subq_retweeted)) \
             .join(luc.ListOfUserClustering, luc.ListOfUserClustering.id == sch.Tweet.user_id) \
             .filter(luc.ListOfUserClustering.cluster_label == cluster_label) \
             .filter(luc.ListOfUserClustering.additional_label == additional_label) \
-            .filter(~sch.Tweet.id.in_(subquery))
+            .filter(~sch.Tweet.id.in_(subq_jaccard))
             
         tweets = pd.read_sql(q.statement, self.session.bind)
         print("tweets.shape " + str(tweets.shape))
@@ -86,8 +89,12 @@ class TweetClustering():
         return self.session.query(ltj.ListOfTweetJaccardClass.id1) \
                     .filter(ltj.ListOfTweetJaccardClass.id1 != ltj.ListOfTweetJaccardClass.clase_equi) \
                     .filter(ltj.ListOfTweetJaccardClass.num_tuits > 1)
+                    
+    def _get_retweeted_subquery(self):
+        return self.session.query(distinct(sch.Tweet.retweeted_id))
         
     def get_tweets_not_classified(self, rt_threshold=0, cluster_label='belief_prop'):
+        subq_retweeted = self._get_retweeted_subquery()
         # subquery for excluding jaccard-duplicate tweets
         subq_jaccard = self._get_jaccard_distance_subquery()
         # subquery for not classified_users
@@ -96,6 +103,7 @@ class TweetClustering():
         # tweets for not classified users
         q = self.session.query(sch.Tweet) \
             .filter(sch.Tweet.retweet == False).filter(sch.Tweet.retweet_count >= rt_threshold) \
+            .filter(sch.Tweet.id.in_(subq_retweeted)) \
             .filter(~sch.Tweet.user_id.in_(subq_classified_users)) \
             .filter(~sch.Tweet.id.in_(subq_jaccard))
 
@@ -470,7 +478,7 @@ class Test(unittest.TestCase):
 
     def testProcess(self):
         self.clustering('clusters_cs.log', label="cs", rt_threshold=0, number_of_clusters=20, delete_all_cluster_lists=True)
-        self.clustering('clusters_nc.log', rt_threshold=1, number_of_clusters=20)
+        self.clustering('clusters_nc.log', rt_threshold=0, number_of_clusters=20)
         self.clustering('clusters_pd_20.log', label="pd", rt_threshold=1, number_of_clusters=20)
         pass
 
