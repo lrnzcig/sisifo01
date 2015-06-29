@@ -5,7 +5,7 @@ Created on 5 de may. de 2015
 
 modified for implementing a cache for not UniqueMixin objects
 '''
-import CachedMixin
+from schema_aux import CachedMixin
 
 def _unique(session, cache, cls, hashfunc, queryfunc, constructor, arg, kw):
     '''

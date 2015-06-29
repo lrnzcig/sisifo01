@@ -412,39 +412,6 @@ class TweetClustering():
                 
 class Test(unittest.TestCase):
 
-    '''
-    HARCODES A MANO CS
-    
-        # hardcodes primera ejecución
-        hardcodes = ['anticorrupcion', 'cambi', 'corrup', 'desmont',
-                    'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez']
-        # hardcodes segunda ejecución
-        hardcodes = ['anticorrupcion', 'cambi', 'corrup', 
-                     'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez',
-                     '#cambiosensato', '#desmontandoeltt', 
-                     'ataqu', 'campan', 'demagogi', 'derech', 'difam', 'hashtag', 'izq',
-                     'mentir', 'mied', 'nervi', 'pablemos','podemos', 'pp', 'program', 
-                     'regeneracion', 'solucion', 'transparent', 'tt']
-        # hardcodes tercera ejecución (dudas!!!)
-        hardcodes = ['anticorrupcion', 'cambi', 'corrup', 
-                     'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez',
-                     '#cambiosensato', '#desmontandoeltt', 
-                     'ataqu', 'campan', 'demagogi', 'derech', 'difam', 'hashtag', 'izq',
-                     'mentir', 'mied', 'nervi', 'pablemos','podemos', 'pp', 'program', 
-                     'regeneracion', 'solucion', 'transparent', 'tt',
-                     'constru', 'honradez', 'dialog', 'coherent']
-        # hardcodes cuarta ejecución (más dudas!!!)
-        hardcodes = ['anticorrupcion', 'cambi', 'corrup', 
-                     'ilusion', 'pact', 'propon', 'propuest', 'sensat', 'venez',
-                     '#cambiosensato', '#desmontandoeltt', 
-                     'ataqu', 'campan', 'demagogi', 'derech', 'difam', 'hashtag', 'izq',
-                     'mentir', 'mied', 'nervi', 'pablemos','podemos', 'pp', 'program', 
-                     'regeneracion', 'solucion', 'transparent', 'tt',
-                     'constru', 'honradez', 'dialog', 'coherent',
-                     'goebbels', 'psoe']
-        '''
-
-
     def clustering(self, file_name, label=None, rt_threshold=0, number_of_clusters=20, delete_all_cluster_lists=False):
         tc = TweetClustering()
         if label == None:
