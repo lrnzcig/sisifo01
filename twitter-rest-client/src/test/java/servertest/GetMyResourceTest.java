@@ -20,10 +20,12 @@ public class GetMyResourceTest {
 		Client client = ClientUtils.getClientWithSslContext();
 		
 		Response response = client.target("http://localhost:8080/jersey-server-test/webresources").path("myresource").queryParam("queryParam", "value").request()
+		//Response response = client.target("http://localhost:8080/jersey-server-test/webresources").path("myresource").request()
 				.property(HttpAuthenticationFeature.HTTP_AUTHENTICATION_BASIC_USERNAME, "kk")
 				.property(HttpAuthenticationFeature.HTTP_AUTHENTICATION_BASIC_PASSWORD, "pass")
 				.get();
 		Assert.assertEquals(200, response.getStatus());
+		System.out.println(response.readEntity(String.class));
 		return;
 	}
 }

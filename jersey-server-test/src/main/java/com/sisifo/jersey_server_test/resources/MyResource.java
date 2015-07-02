@@ -18,6 +18,9 @@ public class MyResource {
     @GET 
     @Produces("text/plain")
     public String getIt(@QueryParam("queryParam") String param) {
+    	if (param == null) {
+    		return "null!";
+    	}
     	if (!"value".equals(param)) {
     		throw new RuntimeException("falta ?queryParam=value");
     	}
