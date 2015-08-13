@@ -20,7 +20,7 @@ class Test(unittest.TestCase):
     def test_stream_filter(self):
         with open(os.path.join(guess_path("twitter-control"), "streaming-keywords.txt")) as f:
             keywords = [line.strip() for line in f.readlines()]
-        stream_filter(keywords, date_limit=(2015, 5, 7, 13, 0, 0))
+        stream_filter(keywords, date_limit=(2015, 8, 6, 0, 0, 0))
         pass
 
 

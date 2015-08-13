@@ -24,6 +24,7 @@ from time import time
 from os.path import expanduser
 import io
 import matplotlib.pyplot as plt
+import logging.handlers
 
 class TweetClustering():
     
@@ -59,7 +60,15 @@ class TweetClustering():
                             'albert', 'river', '..']
     
     def __init__(self):
-        self.schema_mgr = sch.Manager(alchemy_echo=False)
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.INFO)
+        fh = logging.handlers.RotatingFileHandler('/Users/lorenzorubio/Downloads/logtest.log', maxBytes=102400000, backupCount=5)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        self.logger.addHandler(fh)
+
+        #self.schema_mgr = sch.Manager(alchemy_echo=False)
+        self.schema_mgr = sch.Manager(alchemy_echo=False, user="SISIFO01_DESMONTANDOACS")
         self.session = self.schema_mgr.get_session()
         
         self.stemmer = SnowballStemmer('spanish')
@@ -448,7 +457,8 @@ class Test(unittest.TestCase):
         # insertar en bbdd
         if label == None:
             label = 'nc'
-        manager = ltc.Manager(alchemy_echo=False, delete_all_cluster_lists=delete_all_cluster_lists)
+        #manager = ltc.Manager(alchemy_echo=False, delete_all_cluster_lists=delete_all_cluster_lists)
+        manager = ltc.Manager(alchemy_echo=False, delete_all_cluster_lists=delete_all_cluster_lists, user="SISIFO01_DESMONTANDOACS")
         for cluster in range(number_of_clusters):
             manager.dump(tweet_ids_by_cluster[cluster], label, cluster)
                     

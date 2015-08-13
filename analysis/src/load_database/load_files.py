@@ -5,7 +5,7 @@ Created on 30/3/2015
 '''
 import unittest
 import os
-from database import sisifo_connection
+from connection import sisifo_connection
 from load_database.definitions import type_of_file_enum
 from load_database.external_tables import (tweet_load, user_load, user_mention_load, user_friend_load, load_dir_manager)
 from load_database.twitter_tables import manager as twitter_tables_manager
@@ -100,7 +100,7 @@ class Test(unittest.TestCase):
         conn = sisifo_connection.SisifoConnection()
         # clean target tables
         manager = twitter_tables_manager.Manager(conn)
-        manager.cleanup_tables()
+        manager.delete_all()
         
         # TODO should be @ config.properties, should be a list of directories
         path = '/Users/lorenzorubio/Documents/datascience/sisifo01/restapi2/'

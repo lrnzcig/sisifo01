@@ -3,7 +3,7 @@ Created on 30/3/2015
 
 @author: lorenzorubio
 '''
-from abstract_load import Abstract_load
+from load_database.external_tables.abstract_load import Abstract_load
 
 class Tweet_load(Abstract_load):
     '''
@@ -15,15 +15,12 @@ class Tweet_load(Abstract_load):
     '''
     external_table_definition_preformatted = '''
         create table tweet_load (
+            id VARCHAR(256),
             created_at varchar(256),
             favorite_count VARCHAR(256),
-            id VARCHAR(256),
             in_reply_to_status_id    VARCHAR(256),
             in_reply_to_user_id    VARCHAR(256),
-            place_full_name VARCHAR(256),
             retweet_count    VARCHAR(256),
-            retweeted    VARCHAR(256),
-            retweeted_id    VARCHAR(256),
             text VARCHAR(256),
             truncated    VARCHAR(256),
             user_id    VARCHAR(256)
@@ -44,15 +41,12 @@ class Tweet_load(Abstract_load):
     insert_select_query = '''
         insert into tweet
         select 
+            id,
             to_timestamp_tz(created_at, 'DY MON DD HH24:MI:SS TZHTZM YYYY', 'NLS_DATE_LANGUAGE = AMERICAN') AT time zone 'CET',
             favorite_count,
-            id,
             in_reply_to_status_id,
             in_reply_to_user_id,
-            place_full_name,
             retweet_count,
-            BOOLEAN2CHAR(retweeted),
-            retweeted_id,
             text,
             BOOLEAN2CHAR(truncated),
             user_id

@@ -3,6 +3,7 @@
 	<name>analysis</name>
 	<comment></comment>
 	<projects>
+		<project>database</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

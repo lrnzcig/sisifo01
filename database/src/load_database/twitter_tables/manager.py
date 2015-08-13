@@ -17,13 +17,15 @@ class Manager():
         '''
         self.sconnection = conn
     
-    def cleanup_tables(self):
+    def delete_all(self):
         cur = self.sconnection.get().cursor()
         try:
             cur.execute("delete from tweet")
             cur.execute("delete from tuser")
+            cur.execute("delete from thashtag")
+            cur.execute("delete from turl")
             cur.execute("delete from tusermention")
-            cur.execute("delete from follower")
+            cur.execute("delete from tuserurl")
         except cx_Oracle.DatabaseError as e:
             error, = e.args
             self.sconnection.get().rollback()

@@ -13,10 +13,11 @@ class SisifoConnection():
     '''
     
     def __init__(self):
-        properties = yaml.load(open(expanduser("~") + '/.sisifo/connection.properties'))
-        self.database = properties['database']
-        dsnStr = cx_Oracle.makedsn(self.database['host'], self.database['port'], self.database['sid'])
-        self.connection = cx_Oracle.connect(user=self.database['user'], password=self.database['password'], dsn=dsnStr)
+        with open(expanduser("~") + '/.sisifo/connection.properties') as f:
+            properties = yaml.load(f)
+            self.database = properties['database']
+            dsnStr = cx_Oracle.makedsn(self.database['host'], self.database['port'], self.database['sid'])
+            self.connection = cx_Oracle.connect(user=self.database['user'], password=self.database['password'], dsn=dsnStr)
     
     def get(self):
         return self.connection
