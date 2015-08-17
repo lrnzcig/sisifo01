@@ -12,17 +12,19 @@ class Load_dir(Abstract_load):
     '''
 
     create_dir_query = """
-    create directory load_dir as '/media/sf_sisifo01/{relative_path}'
+    create directory load_dir as '{load_path}/{relative_path}'
     """
 
-    def __init__(self, path, connection):
+    def __init__(self, path, connection, vm_load_path='/media/sf_extsisifo'):
         '''
         Input
-            path: directory path
+            path: directory path / filename (only the filename will be taken into account)
             connection: sisifo connection object
+            vm_load_path: final directory
         '''
         Abstract_load.__init__(self, connection)
         self.path = path
+        self.vm_load_path = vm_load_path
     
     def drop(self):
         self.generic_query("drop directory load_dir", do_commit=False)
@@ -32,6 +34,7 @@ class Load_dir(Abstract_load):
         if (not tail):
             head, tail = path.split(head)
         q = Load_dir.create_dir_query.format(
-            relative_path = tail
+            relative_path = tail,
+            load_path = self.vm_load_path
         )
         self.generic_query(q, do_commit=False)
