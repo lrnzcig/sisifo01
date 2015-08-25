@@ -49,21 +49,17 @@ class TweetLoaderAbstract():
     
     
     def _get_tweet_dfs(self, path, filename):
-        '''
         with open(os.path.join(path, filename)) as f: 
             json2csv(f, 
                      os.path.join(path, 'temp.csv'),
                      ['id'] + self.tweet_column_list)
-                     '''
         
         tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=0, header=0, encoding="utf8")
         
-        '''
         with open(os.path.join(path, filename)) as f: 
             json2csv_entities(f, 
                               os.path.join(path, 'temp2.csv'),
                               ['id'], 'retweeted_status', ['id'] + self.tweet_column_list)
-                              '''
         
         orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=1, header=0, encoding="utf8")
         retweet_info = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=0, header=0, encoding="utf8")
