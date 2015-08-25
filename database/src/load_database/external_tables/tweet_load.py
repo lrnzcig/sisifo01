@@ -34,7 +34,7 @@ class Tweet_load(Abstract_load):
              access parameters
              (records delimited by newline skip 1
               characterset utf8
-              FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY "\'"
+              FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\"'
               LRTRIM
              )
             location ('{external_table_filename}')
