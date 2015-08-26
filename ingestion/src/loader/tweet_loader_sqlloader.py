@@ -8,7 +8,7 @@ import os
 from nltk.twitter.util import guess_path
 from loader.tweet_loader_abstract import TweetLoaderAbstract
 from load_database.twitter_tables import manager as twitter_tables_manager
-from load_database.external_tables import load_dir_manager, tweet_load
+from load_database.external_tables import load_dir_manager, tweet_load, user_load
 import connection.sisifo_connection as sisifo_connection
 
 
@@ -36,22 +36,29 @@ class TweetLoader(TweetLoaderAbstract):
         
         - mixed types warning?
         
-        - review tweet counts
-        
         - SO question?
-        
-        - cleanup SQLAlchemy version
         '''
         tfn = filename + ".tweet.csv"
-        tweets.to_csv(os.path.join(self.oracle_path, tfn), header=False, sep=';')
+        tweets.to_csv(os.path.join(self.oracle_path, tfn), header=True, sep=';')
         et = tweet_load.Tweet_load(tfn, self.conn)
         et.recreate_external_table()
         et.insert_into_target()
     
     def user_loader(self, path, filename, regs_per_commit=None):   
-        tot_users = TweetLoaderAbstract._get_user_dfs(self, path, filename)
+        users = TweetLoaderAbstract._get_user_dfs(self, path, filename)
 
+        tfn = filename + ".user.csv"
+        users.to_csv(os.path.join(self.oracle_path, tfn), header=True, sep=';')
+        et = user_load.User_load(tfn, self.conn)
+        et.recreate_external_table()
+        et.insert_into_target()
+
+
+    '''
+    TODO
     
+    - rest of loaders
+    '''    
     def hashtag_loader(self, path, filename, regs_per_commit=None):
         hashtags = TweetLoaderAbstract._get_hashtag_dfs(self, path, filename)
     

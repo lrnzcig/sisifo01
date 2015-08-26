@@ -36,10 +36,10 @@ class TweetLoaderAbstract():
     def load_all_entities(self, path, filename):
         self.tweet_loader(path, filename)
         self.user_loader(path, filename)
-        self.hashtag_loader(path, filename)
-        self.tweet_url_loader(path, filename)
-        self.user_mention_loader(path, filename)
-        self.user_url_loader(path, filename)
+        #self.hashtag_loader(path, filename)
+        #self.tweet_url_loader(path, filename)
+        #self.user_mention_loader(path, filename)
+        #self.user_url_loader(path, filename)
     
     def delete_all_entities(self):
         self.manager.delete_all()
@@ -88,29 +88,34 @@ class TweetLoaderAbstract():
         all_tweets.loc[retweet_info.index, 'retweet_user_id'] = retweet_info['retweeted_status.user.id']
         
         # problems with carriage returns
-        all_tweets['text_clean'] = all_tweets.apply(lambda row: re.sub('\n', ' ', row['text']), axis=1)
-        all_tweets.drop('text', axis=1, inplace=True)
+        self._cleanup_carriage_returns(all_tweets, 'text', 'text_clean')
         
         return all_tweets
     
+    def _cleanup_carriage_returns(self, df, old_column_name, new_column_name):
+        df[new_column_name] = df.apply(lambda row: re.sub('\n', ' ', row[old_column_name]), axis=1)
+        df.drop(old_column_name, axis=1, inplace=True)
+        return df
 
     def user_loader(self, path, filename):   
         raise NotImplemented()
     
-    def _get_user_dfs(self, path, filename):   
-        json2csv(os.path.join(path, filename), 
-                 os.path.join(path, 'temp.csv'),
-                 [{'user' : ['id'] + self.user_column_list}])
+    def _get_user_dfs(self, path, filename):
+        with open(os.path.join(path, filename)) as f: 
+            json2csv(f, 
+                     os.path.join(path, 'temp.csv'),
+                     ['user.id'] + ['user.' + x for x in self.user_column_list])
         # no index since the same user might be two times in the file
-        users = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=0, header=None, encoding="utf8")
+        users = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=0, header=0, encoding="utf8")
         users.columns = self.user_column_list
         
         # users from retweets
-        json2csv_entities(os.path.join(path, filename), 
-                          os.path.join(path, 'temp2.csv'),
-                          ['id'], 'retweeted_status', [{'user' : ['id'] + self.user_column_list}])
+        with open(os.path.join(path, filename)) as f: 
+            json2csv_entities(f, 
+                              os.path.join(path, 'temp2.csv'),
+                              ['id'], 'retweeted_status', ['user.id'] + ['user.' + x for x in self.user_column_list])
         
-        orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=1, header=None, encoding="utf8")
+        orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=1, header=0, encoding="utf8")
         orig_tweets.columns = ['tweet_id'] + self.user_column_list
         
         # drop duplicates by and concat into tot_users
@@ -125,10 +130,16 @@ class TweetLoaderAbstract():
         
         
         # pandas reads as nan even for string columns => fill them with empty string
-        tot_users['description'].fillna('', inplace=True)
+        tot_users['description'].fillna(' ', inplace=True) # TODO last one in csv file makes it fail if empty
         tot_users['location'].fillna('', inplace=True)
         tot_users['name'].fillna('', inplace=True)
         tot_users['url'].fillna('', inplace=True)
+        
+        # problems with carriage returns
+        self._cleanup_carriage_returns(tot_users, 'name', 'name_clean')
+        self._cleanup_carriage_returns(tot_users, 'location', 'location_clean')
+        self._cleanup_carriage_returns(tot_users, 'description', 'description_clean')
+        
         return tot_users
 
     def hashtag_loader(self, path, filename):   
@@ -139,7 +150,7 @@ class TweetLoaderAbstract():
         json2csv_entities(os.path.join(path, filename), 
                           os.path.join(path, 'temp.csv'),
                           ['id'], 'hashtags', ['text'])
-        hashtags = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=None, encoding="utf8")
+        hashtags = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=0, encoding="utf8")
         # remove duplicates
         hashtags.drop_duplicates(inplace=True)
 
@@ -153,7 +164,10 @@ class TweetLoaderAbstract():
         json2csv_entities(os.path.join(path, filename), 
                           os.path.join(path, 'temp.csv'),
                           ['id'], 'urls', ['url'])
-        tweeturls = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=None, encoding="utf8")
+        tweeturls = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=0, encoding="utf8")
+        # remove duplicates
+        tweeturls.drop_duplicates(inplace=True)
+
         return tweeturls
             
     def user_mention_loader(self, path, filename):   
@@ -163,7 +177,7 @@ class TweetLoaderAbstract():
         json2csv_entities(os.path.join(path, filename), 
                           os.path.join(path, 'temp.csv'),
                           ['id'], 'user_mentions', ['id'])
-        usermentions = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=None, encoding="utf8")
+        usermentions = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=0, encoding="utf8")
         # remove duplicates
         usermentions.drop_duplicates(inplace=True)
         return usermentions
@@ -180,7 +194,7 @@ class TweetLoaderAbstract():
         if os.stat(temp_file).st_size == 0:
             # there are no user urls, not at all uncommon
             return None
-        userurls = pd.DataFrame.from_csv(temp_file, index_col=None, header=None, encoding="utf8")
+        userurls = pd.DataFrame.from_csv(temp_file, index_col=None, header=0, encoding="utf8")
         # remove duplicates
         userurls.drop_duplicates(inplace=True)
         return userurls                        
