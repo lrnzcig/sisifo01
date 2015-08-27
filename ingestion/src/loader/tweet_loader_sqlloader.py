@@ -75,7 +75,7 @@ def cleanup_oracle_log_files(path):
     files = os.listdir(path)
     for f in files:
         if f.endswith('.log') | f.endswith('.bad'):
-            os.remove(path + f)
+            os.remove(os.path.join(path, f))
                         
     
 class Test(unittest.TestCase):
@@ -85,20 +85,23 @@ class Test(unittest.TestCase):
         dumper = TweetLoader(oracle_path)
         dumper.delete_all_entities()
         
-        path = guess_path("twitter-files")
         # cleanup log files in the directory
-        cleanup_oracle_log_files(path)
+        cleanup_oracle_log_files(oracle_path)
 
         # recreate oracle's object for directory
         load_dir_m = load_dir_manager.Load_dir(oracle_path, dumper.conn)
         load_dir_m.drop()
         load_dir_m.create()
 
+        path = guess_path("twitter-files")
         filename = "tweets.20150506-180056.rest-desmontandoaciudadanos.json"
         dumper.load_all_entities(path, filename)
+        for f in os.listdir(path):
+            if f.endswith('rest-municipales.json'):
+                print("Loading file... " + f)
+                dumper.load_all_entities(path, f)
         
         
-        #dumper.user_loader(path, filename, regs_per_commit=1)
         pass
 
 
