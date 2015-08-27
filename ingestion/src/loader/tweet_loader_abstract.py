@@ -75,17 +75,21 @@ class TweetLoaderAbstract():
         orig_tweets.drop('id', axis=1, inplace=True)
         orig_tweets.index.name = 'id'
         orig_tweets.columns = self.tweet_column_list
+        # retweet, retweeted_id & retweeted_user_id
+        tweets['retweet'] = 0 
+        tweets.loc[retweet_info.index, 'retweet'] = 1
+        tweets['retweet_id'] = None
+        tweets.loc[retweet_info.index, 'retweet_id'] = retweet_info['retweeted_status.id']
+        tweets['retweet_user_id'] = None
+        tweets.loc[retweet_info.index, 'retweet_user_id'] = retweet_info['retweeted_status.user.id']
+        orig_tweets['retweet'] = 0 
+        orig_tweets['retweet_id'] = None
+        orig_tweets['retweet_user_id'] = None
+
+        # concat        
         all_tweets = pd.concat([tweets, orig_tweets])
         all_tweets.drop_duplicates(inplace=True)
              
-        # retweet, retweeted_id & retweeted_user_id
-        #retweets = pd.merge(tweets, retweet_ids, how='inner', left_index=True, right_index=True)
-        all_tweets['retweet'] = 0 
-        all_tweets.loc[retweet_info.index, 'retweet'] = 1
-        all_tweets['retweet_id'] = None
-        all_tweets.loc[retweet_info.index, 'retweet_id'] = retweet_info['retweeted_status.id']
-        all_tweets['retweet_user_id'] = None
-        all_tweets.loc[retweet_info.index, 'retweet_user_id'] = retweet_info['retweeted_status.user.id']
         
         # problems with carriage returns
         self._cleanup_carriage_returns(all_tweets, 'text', 'text_clean')
