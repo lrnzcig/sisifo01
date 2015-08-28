@@ -34,6 +34,8 @@ class Tweet_load(Abstract_load):
              access parameters
              (records delimited by newline skip 1
               characterset utf8
+              badfile '{external_table_filename}.bad'
+              logfile '{external_table_filename}.log'
               FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\"'
               LRTRIM
              )

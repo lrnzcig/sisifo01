@@ -71,10 +71,10 @@ create table follower (
 
 CREATE OR REPLACE FUNCTION BOOLEAN2CHAR(inp VARCHAR2) RETURN VARCHAR2 AS 
 BEGIN
-  IF (inp = 'true') THEN
+  IF (inp = 'True') THEN
     RETURN '1';
   END IF;
-  IF (inp = 'false') THEN
+  IF (inp = 'False') THEN
     RETURN '0';
   END IF;
   RETURN NULL;
