@@ -18,8 +18,8 @@ class TweetLoader(TweetLoaderAbstract):
     utility class, loads tweets from NLTK json file using SQLLoader (fast Oracle utility)
     '''    
 
-    def __init__(self, oracle_path):
-        self.conn = sisifo_connection.SisifoConnection()
+    def __init__(self, oracle_path, user=None):
+        self.conn = sisifo_connection.SisifoConnection(user)
         manager = twitter_tables_manager.Manager(self.conn)
 
         TweetLoaderAbstract.__init__(self, manager)
@@ -82,7 +82,8 @@ class Test(unittest.TestCase):
 
     def test_tweet_loader(self):
         oracle_path = os.path.abspath("/Volumes/extsisifo/OracleSQLLoader")
-        dumper = TweetLoader(oracle_path)
+        #dumper = TweetLoader(oracle_path, user='TWEETDESMONTANDO')
+        dumper = TweetLoader(oracle_path, user='TWEETMUNICIPAL')
         dumper.delete_all_entities()
         
         # cleanup log files in the directory
@@ -100,7 +101,8 @@ class Test(unittest.TestCase):
             if f.endswith('rest-municipales.json'):
                 print("Loading file... " + f)
                 dumper.load_all_entities(path, f)
-        
+        #filename = "tweets.20150528-171847.rest-municipales.json"
+        #dumper.load_all_entities(path, filename)
         
         pass
 

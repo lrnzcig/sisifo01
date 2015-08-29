@@ -12,12 +12,14 @@ class SisifoConnection():
     Handles connection for tables being loaded
     '''
     
-    def __init__(self):
+    def __init__(self, user=None):
         with open(expanduser("~") + '/.sisifo/connection.properties') as f:
             properties = yaml.load(f)
             self.database = properties['database']
             dsnStr = cx_Oracle.makedsn(self.database['host'], self.database['port'], self.database['sid'])
-            self.connection = cx_Oracle.connect(user=self.database['user'], password=self.database['password'], dsn=dsnStr)
+            if user == None:
+                user = self.database['user']
+            self.connection = cx_Oracle.connect(user=user, password=self.database['password'], dsn=dsnStr)
     
     def get(self):
         return self.connection
