@@ -67,10 +67,10 @@ class TweetLoaderAbstract():
         return self._format_tweet_dfs(tweets, orig_tweets, retweet_info)
 
 
-    def _format_tweet_dfs(self, tweets, orig_tweets, retweet_info):
+    def _format_tweet_dfs(self, tweets, orig_tweets, retweet_info, do_clean_duplicates=False):
         '''
-        return just one list of tweets with no duplicates and information of retweets
-        '''
+        return just one list of tweets with information of retweets
+        '''       
         # concatenate dfs & column names
         orig_tweets.drop('id', axis=1, inplace=True)
         orig_tweets.index.name = 'id'
@@ -78,18 +78,19 @@ class TweetLoaderAbstract():
         # retweet, retweeted_id & retweeted_user_id
         tweets['retweet'] = 0 
         tweets.loc[retweet_info.index, 'retweet'] = 1
-        tweets['retweet_id'] = None
-        tweets.loc[retweet_info.index, 'retweet_id'] = retweet_info['retweeted_status.id']
-        tweets['retweet_user_id'] = None
-        tweets.loc[retweet_info.index, 'retweet_user_id'] = retweet_info['retweeted_status.user.id']
+        tweets = tweets.join(retweet_info['retweeted_status.id'].astype(str))
+        tweets = tweets.join(retweet_info['retweeted_status.user.id'].astype(str))
         orig_tweets['retweet'] = 0 
-        orig_tweets['retweet_id'] = None
-        orig_tweets['retweet_user_id'] = None
+        orig_tweets['retweeted_status.id'] = None
+        orig_tweets['retweeted_status.user.id'] = None
 
-        # concat        
+        # concat
+        if do_clean_duplicates:
+            self._drop_duplicates(tweets)
+            self._drop_duplicates(orig_tweets)        
         all_tweets = pd.concat([tweets, orig_tweets])
-        all_tweets.drop_duplicates(inplace=True)
-             
+        if do_clean_duplicates:
+            self._drop_duplicates(all_tweets)             
         
         # problems with carriage returns
         self._cleanup_carriage_returns(all_tweets, 'text', 'text_clean')
@@ -104,7 +105,7 @@ class TweetLoaderAbstract():
     def user_loader(self, path, filename):   
         raise NotImplemented()
     
-    def _get_user_dfs(self, path, filename):
+    def _get_user_dfs(self, path, filename, do_clean_duplicates=False):
         with open(os.path.join(path, filename)) as f: 
             json2csv(f, 
                      os.path.join(path, 'temp.csv'),
@@ -122,16 +123,14 @@ class TweetLoaderAbstract():
         orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=1, header=0, encoding="utf8")
         orig_tweets.columns = ['tweet_id'] + self.user_column_list
         
-        # drop duplicates by and concat into tot_users
-        users['index'] = users.index
-        users.drop_duplicates(subset=['index'], take_last = True, inplace=True)
-        orig_tweets['index'] = orig_tweets.index
-        orig_tweets.drop_duplicates(subset=['index'], take_last = True, inplace=True)
+        # concat into tot_users
+        if do_clean_duplicates:
+            self._drop_duplicates(users)
+            self._drop_duplicates(orig_tweets)
         orig_tweets.drop('tweet_id', axis=1, inplace=True)
         tot_users = pd.concat([orig_tweets, users])
-        tot_users.drop_duplicates(subset=['index'], take_last = True, inplace=True)
-        tot_users.drop('index', axis=1, inplace=True)
-        
+        if do_clean_duplicates:
+            self._drop_duplicates(tot_users)
         
         # pandas reads as nan even for string columns => fill them with empty string
         tot_users['description'].fillna(' ', inplace=True) # TODO last one in csv file makes it fail if empty
@@ -145,6 +144,11 @@ class TweetLoaderAbstract():
         self._cleanup_carriage_returns(tot_users, 'description', 'description_clean')
         
         return tot_users
+    
+    def _drop_duplicates(self, df):
+        df['index'] = df.index
+        df.drop_duplicates(subset=['index'], take_last = True, inplace=True)
+        df.drop('index', axis=1, inplace=True)
 
     def hashtag_loader(self, path, filename):   
         raise NotImplemented()
