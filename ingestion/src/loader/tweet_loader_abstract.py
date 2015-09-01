@@ -48,7 +48,7 @@ class TweetLoaderAbstract():
         raise NotImplemented()
     
     
-    def _get_tweet_dfs(self, path, filename):
+    def _get_tweet_dfs(self, path, filename, do_clean_duplicates=False, do_cleanup_carriage_returns=True):
         with open(os.path.join(path, filename)) as f: 
             json2csv(f, 
                      os.path.join(path, 'temp.csv'),
@@ -64,10 +64,10 @@ class TweetLoaderAbstract():
         orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=1, header=0, encoding="utf8")
         retweet_info = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=0, header=0, encoding="utf8")
         
-        return self._format_tweet_dfs(tweets, orig_tweets, retweet_info)
+        return self._format_tweet_dfs(tweets, orig_tweets, retweet_info, do_clean_duplicates, do_cleanup_carriage_returns)
 
 
-    def _format_tweet_dfs(self, tweets, orig_tweets, retweet_info, do_clean_duplicates=False):
+    def _format_tweet_dfs(self, tweets, orig_tweets, retweet_info, do_clean_duplicates, do_cleanup_carriage_returns):
         '''
         return just one list of tweets with information of retweets
         '''       
@@ -93,7 +93,8 @@ class TweetLoaderAbstract():
             self._drop_duplicates(all_tweets)             
         
         # problems with carriage returns
-        self._cleanup_carriage_returns(all_tweets, 'text', 'text_clean')
+        if do_cleanup_carriage_returns:
+            self._cleanup_carriage_returns(all_tweets, 'text', 'text_clean')
         
         return all_tweets
     
@@ -105,7 +106,7 @@ class TweetLoaderAbstract():
     def user_loader(self, path, filename):   
         raise NotImplemented()
     
-    def _get_user_dfs(self, path, filename, do_clean_duplicates=False):
+    def _get_user_dfs(self, path, filename, do_clean_duplicates=False, do_cleanup_carriage_returns=True):
         with open(os.path.join(path, filename)) as f: 
             json2csv(f, 
                      os.path.join(path, 'temp.csv'),
@@ -138,10 +139,12 @@ class TweetLoaderAbstract():
         tot_users['name'].fillna('', inplace=True)
         tot_users['url'].fillna('', inplace=True)
         
+        
         # problems with carriage returns
-        self._cleanup_carriage_returns(tot_users, 'name', 'name_clean')
-        self._cleanup_carriage_returns(tot_users, 'location', 'location_clean')
-        self._cleanup_carriage_returns(tot_users, 'description', 'description_clean')
+        if do_cleanup_carriage_returns:
+            self._cleanup_carriage_returns(tot_users, 'name', 'name_clean')
+            self._cleanup_carriage_returns(tot_users, 'location', 'location_clean')
+            self._cleanup_carriage_returns(tot_users, 'description', 'description_clean')
         
         return tot_users
     
@@ -154,13 +157,13 @@ class TweetLoaderAbstract():
         raise NotImplemented()
     
     
-    def _get_hashtag_dfs(self, path, filename):
+    def _get_hashtag_dfs(self, path, filename, do_clean_duplicates=False):
         json2csv_entities(os.path.join(path, filename), 
                           os.path.join(path, 'temp.csv'),
                           ['id'], 'hashtags', ['text'])
         hashtags = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=0, encoding="utf8")
-        # remove duplicates
-        hashtags.drop_duplicates(inplace=True)
+        if do_clean_duplicates:
+            hashtags.drop_duplicates(inplace=True)
 
         # TODO hashtags from retweets 
         return hashtags
@@ -168,33 +171,33 @@ class TweetLoaderAbstract():
     def tweet_url_loader(self, path, filename):   
         raise NotImplemented()
     
-    def _get_tweet_url_dfs(self, path, filename):
+    def _get_tweet_url_dfs(self, path, filename, do_clean_duplicates=False):
         json2csv_entities(os.path.join(path, filename), 
                           os.path.join(path, 'temp.csv'),
                           ['id'], 'urls', ['url'])
         tweeturls = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=0, encoding="utf8")
-        # remove duplicates
-        tweeturls.drop_duplicates(inplace=True)
+        if do_clean_duplicates:
+            tweeturls.drop_duplicates(inplace=True)
 
         return tweeturls
             
     def user_mention_loader(self, path, filename):   
         raise NotImplemented()
     
-    def _get_user_mention_dfs(self, path, filename):
+    def _get_user_mention_dfs(self, path, filename, do_clean_duplicates=False):
         json2csv_entities(os.path.join(path, filename), 
                           os.path.join(path, 'temp.csv'),
                           ['id'], 'user_mentions', ['id'])
         usermentions = pd.DataFrame.from_csv(os.path.join(path, 'temp.csv'), index_col=None, header=0, encoding="utf8")
-        # remove duplicates
-        usermentions.drop_duplicates(inplace=True)
+        if do_clean_duplicates:
+            usermentions.drop_duplicates(inplace=True)
         return usermentions
 
     
     def user_url_loader(self, path, filename):   
         raise NotImplemented()
     
-    def _get_user_url_dfs(self, path, filename):
+    def _get_user_url_dfs(self, path, filename, do_clean_duplicates=False):
         temp_file = os.path.join(path, 'temp.csv')
         json2csv_entities(os.path.join(path, filename), 
                           temp_file,
@@ -203,6 +206,6 @@ class TweetLoaderAbstract():
             # there are no user urls, not at all uncommon
             return None
         userurls = pd.DataFrame.from_csv(temp_file, index_col=None, header=0, encoding="utf8")
-        # remove duplicates
-        userurls.drop_duplicates(inplace=True)
+        if do_clean_duplicates:
+            userurls.drop_duplicates(inplace=True)
         return userurls                        

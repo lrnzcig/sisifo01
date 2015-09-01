@@ -37,6 +37,8 @@ class TweetLoader(TweetLoaderAbstract):
         - mixed types warning?
         
         - SO question?
+        
+        - remove older user/tweets in the case of a loop of files
         '''
         tfn = filename + ".tweet.csv"
         tweets.to_csv(os.path.join(self.oracle_path, tfn), header=True, sep=';')

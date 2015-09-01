@@ -101,7 +101,7 @@ order by retweet_count desc
 select count(*) from tuser
 select count(distinct user_id) from tweet
 
--- comprobaci—n
+-- comprobaci—n = lenta!
 select count(distinct user_id) from tweet
 where retweet = '0' 
 or (
@@ -109,16 +109,16 @@ retweet = '1' and
 retweeted_id in (select id from tweet where retweet = '0')
 )
 
--- usuarios que han retuiteado
+-- usuarios que han retuiteado => debe dar 22328
 select count(distinct user_id) from tweet
 where retweet = '1'
 and retweeted_id in (select id from tweet where retweet = '0')
 
--- usuarios con tweet original
+-- usuarios con tweet original => debe dar 5556
 select count(distinct user_id) from tweet
 where retweet = 0
 
--- usuarios con tweet original y que han retuiteado
+-- usuarios con tweet original y que han retuiteado => debe dar 2566
 select count(distinct user_id) from(
   select user_id from tweet
   where retweet = '1'
