@@ -4,14 +4,15 @@ Created on 29 de abr. de 2015
 @author: lorenzorubio
 '''
 import unittest
+from datetime import datetime
+import math
+from nltk.compat import UTC
 from nltk.twitter.util import guess_path
 from schema_aux import twitter_schema as sch
-from datetime import datetime
-from nltk.compat import UTC
+from loader.tweet_loader_abstract import TweetLoaderAbstract
 # performance checks
 from pympler import summary, muppy
 import psutil
-from loader.tweet_loader_abstract import TweetLoaderAbstract
 
 
 
@@ -30,15 +31,15 @@ class TweetLoader(TweetLoaderAbstract):
     user_url_key = sch.UserMention.__tablename__
     
 
-    def __init__(self):
+    def __init__(self, user=None):
         #manager = sch.Manager(user='SISIFO01_AUCOMMAN', alchemy_echo=False)
-        manager = sch.Manager(alchemy_echo=False)
+        manager = sch.Manager(alchemy_echo=True, user=user)
         TweetLoaderAbstract.__init__(self, manager)
         
         self.session = self.manager.get_session()
 
         self.init_cache()
-        self.show_memory_usage = False
+        self.show_memory_usage = True
         
     def init_cache(self):
         self.cache = {self.tweet_key : {}, self.user_key : {},
@@ -54,15 +55,26 @@ class TweetLoader(TweetLoaderAbstract):
         TweetLoaderAbstract.delete_all_entities(self)
         self.session = self.manager.get_session()        
     
+    '''
+    TODO 
+    
+    this belongs to abstract, even if it does not apply to Oracle?
+    '''
+    def boolean2char(self, boolean_value):
+        if boolean_value:
+            return 1
+        return 0
     
     def tweet_loader(self, path, filename, regs_per_commit=default_regs_per_commit):
-        tweets = TweetLoaderAbstract._get_tweet_dfs(self, path, filename)
+        tweets = TweetLoaderAbstract._get_tweet_dfs(self, path, filename, do_clean_duplicates=True, do_cleanup_carriage_returns=False)
+        
+        tweets['truncated'] = tweets.apply(lambda row: self.boolean2char(row['truncated']), axis = 1)
         
         cache = self.cache[self.tweet_key]
         counter = 0
         for tweet in tweets.iterrows():
             created_at = datetime.strptime(tweet[1]['created_at'], '%a %b %d %H:%M:%S +0000 %Y').replace(tzinfo=UTC)
-            tweet_id = tweet[0]
+            tweet_id = tweet[0].astype(str)
             old_tweet = sch.Tweet.get(self.session, cache, id=tweet_id)
             if old_tweet:
                 if old_tweet.retweet_count < tweet[1]['retweet_count'] or old_tweet.favorite_count < tweet[1]['favorite_count']:
@@ -70,23 +82,34 @@ class TweetLoader(TweetLoaderAbstract):
                     old_tweet.retweet_count = tweet[1]['retweet_count']
                     old_tweet.favorite_count = tweet[1]['favorite_count']
                 continue
-            sch.Tweet.as_cached(self.session, cache, created_at=created_at, favorite_count=tweet[1]['favorite_count'],
-                                id=tweet_id, in_reply_to_status_id=tweet[1]['in_reply_to_status_id'],
-                                in_reply_to_user_id=tweet[1]['in_reply_to_user_id'], retweet_count=tweet[1]['retweet_count_tweet'],
-                                retweet=tweet[1]['retweet'], text=tweet[1]['text'], truncated=tweet[1]['truncated'],
-                                user_id=tweet[1]['user.id'], retweeted_id=tweet[1]['retweeted_id'], retweeted_user_id=tweet[1]['retweeted_user_id'])
+            tweet_obj = sch.Tweet.as_cached(self.session, cache, created_at=created_at, favorite_count=tweet[1]['favorite_count'],
+                                            id=tweet_id, in_reply_to_status_id=tweet[1]['in_reply_to_status_id'],
+                                            retweet_count=tweet[1]['retweet_count'],
+                                            retweet=tweet[1]['retweet'], text=tweet[1]['text'], truncated=tweet[1]['truncated'],
+                                            user_id=tweet[1]['user.id'])
+            # problems with numerics
+            if not math.isnan(tweet[1]['in_reply_to_user_id']):
+                tweet_obj.in_reply_to_user_id = tweet[1]['in_reply_to_user_id']
+            if isinstance(tweet[1]['retweeted_status.id'], str):
+                tweet_obj.retweeted_id = tweet[1]['retweeted_status.id']
+            if isinstance(tweet[1]['retweeted_status.user.id'], str):
+                tweet_obj.retweeted_user_id = tweet[1]['retweeted_status.user.id']
             counter += 1
-            self._commit(counter)
+            self._commit(counter, regs_per_commit=100)
         self._commit()
     
     
     def user_loader(self, path, filename, regs_per_commit=default_regs_per_commit):
-        tot_users = TweetLoaderAbstract._get_user_dfs(self, path, filename)
+        tot_users = TweetLoaderAbstract._get_user_dfs(self, path, filename, do_clean_duplicates=True, do_cleanup_carriage_returns=False)
+
+        tot_users['is_translator'] = tot_users.apply(lambda row: self.boolean2char(row['is_translator']), axis = 1) 
+        tot_users['protected'] = tot_users.apply(lambda row: self.boolean2char(row['protected']), axis = 1) 
+        tot_users['verified'] = tot_users.apply(lambda row: self.boolean2char(row['verified']), axis = 1) 
         
         cache = self.cache[self.user_key] 
         counter = 0
         for user in tot_users.iterrows():
-            user_id = user[0]
+            user_id = user[0].astype(str)
             old_user = sch.User.get(self.session, cache, id=user_id)
             if old_user:
                 if old_user.statuses_count < user[1]['statuses_count']:
@@ -115,7 +138,7 @@ class TweetLoader(TweetLoaderAbstract):
                             protected = user[1]['protected'], statuses_count = user[1]['statuses_count'], url=user[1]['url'],
                             verified = user[1]['verified'], profile_link_color = user[1]['profile_link_color'])
             counter += 1
-            self._commit(counter, regs_per_commit)
+            self._commit(counter, regs_per_commit=100)
         self._commit()
 
     
@@ -211,7 +234,14 @@ class TweetLoader(TweetLoaderAbstract):
 class Test(unittest.TestCase):
 
     def test_tweet_loader(self):
-        dumper = TweetLoader()
+        #dumper = TweetLoader()
+        dumper = TweetLoader(user='TWEETDESMONTANDO')
+
+        '''
+        TODO
+        
+        - unify CHAR(1) datatypes (?)
+        '''
         dumper.delete_all_entities()
         path = guess_path("twitter-files")
         filename = "tweets.20150506-180056.rest-desmontandoaciudadanos.json"
