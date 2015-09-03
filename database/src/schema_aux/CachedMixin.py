@@ -66,6 +66,4 @@ class CachedMixin(object):
         obj = cls(*arg, **kw)
         session.add(obj)
         _add_to_cache(session, cache, cls, cls.unique_hash, arg, kw, obj)
-        return obj
-
     

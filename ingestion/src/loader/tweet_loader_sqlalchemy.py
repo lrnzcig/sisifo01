@@ -74,7 +74,7 @@ class TweetLoader(TweetLoaderAbstract):
         counter = 0
         for tweet in tweets.iterrows():
             created_at = datetime.strptime(tweet[1]['created_at'], '%a %b %d %H:%M:%S +0000 %Y').replace(tzinfo=UTC)
-            tweet_id = tweet[0].astype(str)
+            tweet_id = int(tweet[0])
             old_tweet = sch.Tweet.get(self.session, cache, id=tweet_id)
             if old_tweet:
                 if old_tweet.retweet_count < tweet[1]['retweet_count'] or old_tweet.favorite_count < tweet[1]['favorite_count']:
@@ -82,20 +82,31 @@ class TweetLoader(TweetLoaderAbstract):
                     old_tweet.retweet_count = tweet[1]['retweet_count']
                     old_tweet.favorite_count = tweet[1]['favorite_count']
                 continue
-            tweet_obj = sch.Tweet.as_cached(self.session, cache, created_at=created_at, favorite_count=tweet[1]['favorite_count'],
-                                            id=tweet_id, in_reply_to_status_id=tweet[1]['in_reply_to_status_id'],
-                                            retweet_count=tweet[1]['retweet_count'],
-                                            retweet=tweet[1]['retweet'], text=tweet[1]['text'], truncated=tweet[1]['truncated'],
-                                            user_id=tweet[1]['user.id'])
             # problems with numerics
-            if not math.isnan(tweet[1]['in_reply_to_user_id']):
-                tweet_obj.in_reply_to_user_id = tweet[1]['in_reply_to_user_id']
+            if math.isnan(tweet[1]['in_reply_to_user_id']):
+                in_reply_to_user_id = None
+            else:
+                in_reply_to_user_id = int(tweet[1]['in_reply_to_user_id'])
+            if math.isnan(tweet[1]['in_reply_to_status_id']):
+                in_reply_to_status_id = None
+            else:
+                in_reply_to_status_id = int(tweet[1]['in_reply_to_status_id'])
             if isinstance(tweet[1]['retweeted_status.id'], str):
-                tweet_obj.retweeted_id = tweet[1]['retweeted_status.id']
+                retweeted_id = int(tweet[1]['retweeted_status.id'])
+            else:
+                retweeted_id = None
             if isinstance(tweet[1]['retweeted_status.user.id'], str):
-                tweet_obj.retweeted_user_id = tweet[1]['retweeted_status.user.id']
+                retweeted_user_id = int(tweet[1]['retweeted_status.user.id'])
+            else:
+                retweeted_user_id = None
+            user_id = int(tweet[1]['user.id'])
+            sch.Tweet.as_cached(self.session, cache, created_at=created_at, favorite_count=tweet[1]['favorite_count'],
+                                id=tweet_id, in_reply_to_status_id=in_reply_to_status_id,
+                                retweet_count=tweet[1]['retweet_count'], in_reply_to_user_id=in_reply_to_user_id,
+                                retweet=tweet[1]['retweet'], text=tweet[1]['text'], truncated=tweet[1]['truncated'],
+                                user_id=user_id, retweeted_id=retweeted_id, retweeted_user_id=retweeted_user_id)
             counter += 1
-            self._commit(counter, regs_per_commit=100)
+            self._commit(counter, regs_per_commit)
         self._commit()
     
     
@@ -130,15 +141,15 @@ class TweetLoader(TweetLoaderAbstract):
                     old_user.profile_link_color = user[1]['profile_link_color']
                 continue
             created_at = datetime.strptime(user[1]['created_at'], '%a %b %d %H:%M:%S +0000 %Y').replace(tzinfo=UTC)
-            user = sch.User.as_cached(self.session, cache, id=user_id, screen_name=user[1]['screen_name'], created_at=created_at,
-                            contributors_enabled=user[1]['contributors_enabled'], description=user[1]['description'],
-                            favourites_count = user[1]['favourites_count'], followers_count = user[1]['followers_count'],
-                            friends_count = user[1]['friends_count'], is_translator = user[1]['is_translator'],
-                            listed_count = user[1]['listed_count'], location = user[1]['location'], name = user[1]['name'],
-                            protected = user[1]['protected'], statuses_count = user[1]['statuses_count'], url=user[1]['url'],
-                            verified = user[1]['verified'], profile_link_color = user[1]['profile_link_color'])
+            sch.User.as_cached(self.session, cache, id=user_id, screen_name=user[1]['screen_name'], created_at=created_at,
+                               contributors_enabled=user[1]['contributors_enabled'], description=user[1]['description'],
+                               favourites_count = user[1]['favourites_count'], followers_count = user[1]['followers_count'],
+                               friends_count = user[1]['friends_count'], is_translator = user[1]['is_translator'],
+                               listed_count = user[1]['listed_count'], location = user[1]['location'], name = user[1]['name'],
+                               protected = user[1]['protected'], statuses_count = user[1]['statuses_count'], url=user[1]['url'],
+                               verified = user[1]['verified'], profile_link_color = user[1]['profile_link_color'])
             counter += 1
-            self._commit(counter, regs_per_commit=100)
+            self._commit(counter, regs_per_commit)
         self._commit()
 
     
@@ -240,7 +251,9 @@ class Test(unittest.TestCase):
         '''
         TODO
         
-        - unify CHAR(1) datatypes (?)
+        - cleanup datatypes in abstract
+        
+        - python 2.7/3.4
         '''
         dumper.delete_all_entities()
         path = guess_path("twitter-files")

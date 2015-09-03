@@ -9,7 +9,7 @@ create table tweet (
   retweet	SMALLINT,
   retweeted_id INTEGER,
   retweeted_user_id INTEGER,
-  text VARCHAR(256),
+  text VARCHAR(1024),
   truncated	CHAR(1),
   user_id	INTEGER not null,
   CONSTRAINT tweet_pk PRIMARY KEY (id)
@@ -33,6 +33,7 @@ create table tuser (
   url	VARCHAR(1024),
   verified CHAR(1),
   withheld CHAR(1),
+  profile_link_color CHAR(6)
   CONSTRAINT tuser_pk PRIMARY KEY (id)
 );
 
