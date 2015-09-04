@@ -32,14 +32,13 @@ class TweetLoader(TweetLoaderAbstract):
     
 
     def __init__(self, user=None):
-        #manager = sch.Manager(user='SISIFO01_AUCOMMAN', alchemy_echo=False)
-        manager = sch.Manager(alchemy_echo=True, user=user)
+        manager = sch.Manager(alchemy_echo=False, user=user)
         TweetLoaderAbstract.__init__(self, manager)
         
         self.session = self.manager.get_session()
 
         self.init_cache()
-        self.show_memory_usage = True
+        self.show_memory_usage = False
         
     def init_cache(self):
         self.cache = {self.tweet_key : {}, self.user_key : {},
@@ -120,7 +119,7 @@ class TweetLoader(TweetLoaderAbstract):
         cache = self.cache[self.user_key] 
         counter = 0
         for user in tot_users.iterrows():
-            user_id = user[0].astype(str)
+            user_id = int(user[0])
             old_user = sch.User.get(self.session, cache, id=user_id)
             if old_user:
                 if old_user.statuses_count < user[1]['statuses_count']:
@@ -260,8 +259,7 @@ class Test(unittest.TestCase):
         filename = "tweets.20150506-180056.rest-desmontandoaciudadanos.json"
         dumper.load_all_entities(path, filename)
         
-        
-        #dumper.user_loader(path, filename, regs_per_commit=1)
+        #dumper.user_loader(path, filename)#, regs_per_commit=1)
         pass
 
 
