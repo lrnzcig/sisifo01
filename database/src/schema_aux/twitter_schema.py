@@ -24,7 +24,7 @@ class Tweet(CachedMixin, Base):
     retweet = Column(SmallInteger)
     retweeted_id = Column(Integer)
     retweeted_user_id = Column(Integer)
-    text = Column(String(512))
+    text = Column(String(1024))
     truncated = Column(SmallInteger)
     user_id = Column(Integer)
 
