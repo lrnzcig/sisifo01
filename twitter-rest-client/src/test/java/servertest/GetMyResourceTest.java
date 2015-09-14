@@ -17,7 +17,7 @@ public class GetMyResourceTest {
 
 	@Test
 	public void getTest() throws NoSuchAlgorithmException, KeyManagementException {	
-		Client client = ClientUtils.getClientWithSslContext();
+		Client client = ClientUtils.getClientWithAuthenticationAndJackson();
 		
 		Response response = client.target("http://localhost:8080/jersey-server-test/webresources").path("myresource").queryParam("queryParam", "value").request()
 		//Response response = client.target("http://localhost:8080/jersey-server-test/webresources").path("myresource").request()
