@@ -61,13 +61,17 @@ class TweetLoaderAbstract():
                               os.path.join(path, 'temp2.csv'),
                               ['id'], 'retweeted_status', ['id'] + self.tweet_column_list)
         
-        orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=1, header=0, encoding="utf8")
-        retweet_info = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=0, header=0, encoding="utf8")
+        orig_tweets = pd.DataFrame.from_csv(os.path.join(path, 'temp2.csv'), index_col=None, header=0, encoding="utf8")
         
-        return self._format_tweet_dfs(tweets, orig_tweets, retweet_info, do_clean_duplicates, do_cleanup_carriage_returns)
+        return self._format_tweet_dfs(tweets, orig_tweets, do_clean_duplicates, do_cleanup_carriage_returns)
 
 
-    def _format_tweet_dfs(self, tweets, orig_tweets, retweet_info, do_clean_duplicates, do_cleanup_carriage_returns):
+    def _format_tweet_dfs(self, tweets, orig_tweets, do_clean_duplicates, do_cleanup_carriage_returns):
+        # get information on retweets (basically id and user of original tweets
+        retweet_info = pd.DataFrame.copy(orig_tweets).set_index('id')
+        orig_tweets = orig_tweets.set_index('retweeted_status.id')
+        orig_tweets.set_index('id')
+        
         '''
         return just one list of tweets with information of retweets
         '''       
