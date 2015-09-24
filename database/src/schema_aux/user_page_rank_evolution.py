@@ -4,7 +4,7 @@ Created on 22 de sept. de 2015
 @author: lorenzorubio
 '''
 import pandas as pd
-from sqlalchemy import Column, Integer, String, Float, create_engine
+from sqlalchemy import Column, String, Float, BigInteger, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import schema_aux.utils as utils
@@ -13,7 +13,7 @@ Base = declarative_base()
 
 class UserPageRankEvolution(Base):
     __tablename__ = 'user_page_rank_evolution'
-    user_id = Column(Integer, primary_key=True)
+    user_id = Column(BigInteger, primary_key=True)
     rank_exec_id = Column(String(256), primary_key=True)
     rank_step_id = Column(String(256), primary_key=True)
     rank = Column(Float)

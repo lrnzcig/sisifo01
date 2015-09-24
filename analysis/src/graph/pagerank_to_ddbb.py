@@ -164,7 +164,7 @@ class Test(unittest.TestCase):
 
 
     def testName(self):
-        pr_list_manager = upre.Manager(alchemy_echo=False, delete_all=False, user="TWEETDESMONTANDO_bck")
+        pr_list_manager = upre.Manager(alchemy_echo=False, delete_all=False, user="almadraba")
 
         
         path = guess_path("twitter-files")

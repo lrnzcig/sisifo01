@@ -26,5 +26,10 @@ def get_database_url_sql_alchemy(user=None, alchemy_echo=True):
     database = properties['database']
     if user == None:
         user = database['user']
-    url = database['dialect'] + "://" + user + ":" + database['password'] + '@' + database['host'] + "/" + database['sid']
+    if database['dialect'] == 'oracle':
+        url = database['dialect'] + "://" + user + ":" + database['password'] + '@' + database['host'] + "/" + database['sid']
+    elif database['dialect'] == 'postgresql':
+        url = database['dialect'] + "://" + user + ":" + database['password'] + '@' + database['host'] + ":" + database['port'] + "/" + database['database']
+    else:
+        raise RuntimeError("dialect!")
     return url
