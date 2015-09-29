@@ -49,7 +49,7 @@ class Manager():
         #us.to_sql(ListOfUserClustering.__tablename__, session.bind, if_exists='replace')
         for user_id in users_set:
             reg = UserPageRankEvolution(user_id=int(user_id), rank_exec_id=rank_exec_id, rank_step_id=rank_step_id,
-                                        rank=rank_df.loc[user_id])
+                                        rank=float(rank_df.loc[user_id]))
             session.add(reg)
         session.commit()
         
