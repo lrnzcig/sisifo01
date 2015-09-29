@@ -5,7 +5,7 @@ Created on 22 de sept. de 2015
 @author: lorenzorubio
 '''
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 from nltk.compat import UTC
 from nltk.twitter.util import guess_path
 from loader.tweet_loader_abstract import TweetLoaderAbstract
@@ -79,36 +79,50 @@ class TweetGraphLoader(TweetLoaderAbstract):
         print(self.users.loc[3094195049])
         return pagerank_df
         
+    def get_start_date(self):
+        return self.tweets.sort(['created_at_date'], ascending=True)[0:1]['created_at_date'].item()
+
+    def get_end_date(self):
+        return self.tweets.sort(['created_at_date'], ascending=False)[0:1]['created_at_date'].item()
+    
+    def get_rank_suffix(self, date):
+        return str(date.day) + "," + str(date.hour)
                 
-    def process_page_rank_evolution(self, global_page_rank_df, datetimes, year=2015, month=5, do_sliding_window=False):
+    def process_page_rank_evolution(self, global_page_rank_df, hours_step=1, do_sliding_window=False):
         users_pr_evolution = self.users['screen_name']
         # add rank for the full graph
         users_pr_evolution = pd.DataFrame(users_pr_evolution).join(global_page_rank_df['rank'])
         
         num_tweets_evolution = []
+        start_date = self.get_start_date()
+        end_date = self.get_end_date()
 
+        date_upper = start_date
         date_lower = None
-        for day, time in datetimes:
-            date_upper = datetime(year, month, day, time, 0, 0).replace(tzinfo=UTC)
+        columns = []
+        do_continue = True
+        while do_continue:
+            date_upper = date_upper + timedelta(hours=hours_step)
+            if date_upper > end_date:
+                # this is the last execution
+                do_continue = False
+                
             if do_sliding_window:
                 pagerank_df_step, len_tweets_step = self.rank_before_date(date_upper, date_lower)
             else:
                 pagerank_df_step, len_tweets_step = self.rank_before_date(date_upper, None)
             date_lower = date_upper
             
-            users_pr_evolution = users_pr_evolution.join(pagerank_df_step['rank'], rsuffix=str(day)+','+str(time))
+            users_pr_evolution = users_pr_evolution.join(pagerank_df_step['rank'], rsuffix=self.get_rank_suffix(date_upper))
+            columns = columns + ['rank' + self.get_rank_suffix(date_upper)]
             num_tweets_evolution += [len_tweets_step]
             
         # from final date to end
         if do_sliding_window:
             pagerank_df_step, len_tweets_step = self.rank_before_date(None, date_lower)
             users_pr_evolution = users_pr_evolution.join(pagerank_df_step['rank'], rsuffix='final')
-        
-        print(num_tweets_evolution)
-        print(users_pr_evolution.loc[282339186])
-        print(users_pr_evolution.loc[20909329])
-        
-        return users_pr_evolution
+                
+        return users_pr_evolution, columns
         
         
     def get_edges_before_date(self, date_upper, date_lower=None):
@@ -175,15 +189,14 @@ class Test(unittest.TestCase):
         
         global_page_rank_df = ranker.process_global_page_rank()
         
-        datetimes = [(4, 9), (4, 12), (4, 15), (4, 18), (4, 21), (5, 0)]
-        users_pr_evolution = ranker.process_page_rank_evolution(global_page_rank_df, datetimes, do_sliding_window=False)
-
-        x_axis = ['d' + str(day) + ' ' + str(time) + 'h' for (day,time) in datetimes]
-        x_axis += ['final']
-        column_names = ['rank4,9', 'rank4,12', 'rank4,15', 'rank4,18', 'rank4,21', 'rank5,0', 'rank']
+        hours_step = 4
         
-        for column in column_names:
-            pr_list_manager.dump(users_pr_evolution.index, "full", column, users_pr_evolution[column])
+        users_pr_evolution, columns = ranker.process_page_rank_evolution(global_page_rank_df, hours_step=hours_step, 
+                                                                         do_sliding_window=False)
+        order = 1   
+        for column in columns:
+            pr_list_manager.dump(users_pr_evolution.index, "full", column, users_pr_evolution[column], order, hours_step, None)
+            order = order + 1
         
         #top5
         ids = [282339186, 20909329, 341657886, 173665005, 187564239]
@@ -191,16 +204,17 @@ class Test(unittest.TestCase):
         # el top de ciudadanos
         ids = ids + [38643994]
         
-        ranker.graph_for_ids(ids, users_pr_evolution, x_axis, column_names)
+        ranker.graph_for_ids(ids, users_pr_evolution, columns, columns)
 
-        column_names = ['rank4,9', 'rank4,12', 'rank4,15', 'rank4,18', 'rank4,21', 'rank5,0', 'rankfinal']
-        
-        users_pr_sliding_window = ranker.process_page_rank_evolution(global_page_rank_df, datetimes, do_sliding_window=True)
+        users_pr_sliding_window, columns = ranker.process_page_rank_evolution(global_page_rank_df, hours_step=hours_step, 
+                                                                              do_sliding_window=False)
 
-        for column in column_names:
-            pr_list_manager.dump(users_pr_sliding_window.index, "window", column, users_pr_sliding_window[column])
+        order = 1   
+        for column in columns:
+            pr_list_manager.dump(users_pr_sliding_window.index, "window", column, users_pr_sliding_window[column], order, hours_step, None)
+            order = order + 1
 
-        ranker.graph_for_ids(ids, users_pr_sliding_window, x_axis, column_names)
+        ranker.graph_for_ids(ids, users_pr_sliding_window, columns, columns)
 
         pass
 
