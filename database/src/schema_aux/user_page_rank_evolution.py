@@ -73,20 +73,15 @@ class Manager():
                    .filter(UserPageRankExec.rank_exec_label == rank_exec_label) \
                    .first()
         if not exec_reg:
-            exec_reg = UserPageRankExec(rank_exec_label=rank_exec_label)
+            exec_reg = UserPageRankExec(rank_exec_label=rank_exec_label,
+                                        hours_step=hours_step)
             session.add(exec_reg)
             
-        exec_step_reg = session.query(UserPageRankExecStep) \
-                        .filter(UserPageRankExecStep.rank_step_label == rank_step_label) \
-                        .filter(UserPageRankExecStep.rank_exec_id == exec_reg.id) \
-                        .first()
-        
-        if not exec_step_reg:
-            exec_step_reg = UserPageRankExecStep(rank_exec_id=exec_reg.id,
-                                                 rank_step_label=rank_step_label,
-                                                 step_order=order,
-                                                 step_timestamp=step_timestamp)
-            session.add(exec_step_reg)
+        exec_step_reg = UserPageRankExecStep(rank_exec_id=exec_reg.id,
+                                             rank_step_label=rank_step_label,
+                                             step_order=order,
+                                             step_timestamp=step_timestamp)
+        session.add(exec_step_reg)
         
         for user_id in users_set:
             reg = UserPageRankEvolution(user_id=int(user_id), rank_exec_id=exec_reg.id,

@@ -195,6 +195,7 @@ class Test(unittest.TestCase):
                                                                          do_sliding_window=False)
         order = 1   
         for column in columns:
+            # TODO timestamps + better column names !!
             pr_list_manager.dump(users_pr_evolution.index, "full", column, users_pr_evolution[column], order, hours_step, None)
             order = order + 1
         
@@ -207,10 +208,11 @@ class Test(unittest.TestCase):
         ranker.graph_for_ids(ids, users_pr_evolution, columns, columns)
 
         users_pr_sliding_window, columns = ranker.process_page_rank_evolution(global_page_rank_df, hours_step=hours_step, 
-                                                                              do_sliding_window=False)
+                                                                              do_sliding_window=True)
 
         order = 1   
         for column in columns:
+            # TODO timestamps + better column names !!
             pr_list_manager.dump(users_pr_sliding_window.index, "window", column, users_pr_sliding_window[column], order, hours_step, None)
             order = order + 1
 
