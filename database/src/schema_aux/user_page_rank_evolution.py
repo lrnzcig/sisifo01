@@ -4,7 +4,7 @@ Created on 22 de sept. de 2015
 @author: lorenzorubio
 '''
 import pandas as pd
-from sqlalchemy import Column, String, Float, BigInteger, Integer, ForeignKey, DateTime, create_engine
+from sqlalchemy import Column, String, Float, BigInteger, Integer, ForeignKey, DateTime, Sequence, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import schema_aux.utils as utils
@@ -13,7 +13,12 @@ Base = declarative_base()
 
 class UserPageRankExec(Base):
     __tablename__ = 'user_page_rank_exec'
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    '''
+    autoincrement=True works fine for postgres, without the Sequence
+    (ends up creating a sequence with different parameters)
+    the Sequence is needed in oracle, and works for both
+    '''
+    id = Column(Integer, Sequence('user_page_rank_exec_seq'), primary_key=True)
     rank_exec_label = Column(String(256))
     hour_step = Column(Integer)
     
@@ -23,7 +28,12 @@ class UserPageRankExec(Base):
 
 class UserPageRankExecStep(Base):
     __tablename__ = 'user_page_rank_exec_step'
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    '''
+    autoincrement=True works fine for postgres, without the Sequence
+    (ends up creating a sequence with different parameters)
+    the Sequence is needed in oracle, and works for both
+    '''
+    id = Column(Integer, Sequence('user_page_rank_exec_step_seq'), primary_key=True)
     rank_exec_id = Column(Integer, ForeignKey('user_page_rank_exec.id'))
     rank_step_label = Column(String(256))
     step_order = Column(Integer)
@@ -74,14 +84,20 @@ class Manager():
                    .first()
         if not exec_reg:
             exec_reg = UserPageRankExec(rank_exec_label=rank_exec_label,
-                                        hours_step=hours_step)
+                                        hour_step=hours_step)
             session.add(exec_reg)
+            
+            # TODO fix sequences read-back value
+            session.commit()
+            exec_reg = session.query(UserPageRankExec) \
+                       .filter(UserPageRankExec.rank_exec_label == rank_exec_label) \
+                       .first()
             
         exec_step_reg = UserPageRankExecStep(rank_exec_id=exec_reg.id,
                                              rank_step_label=rank_step_label,
                                              step_order=order,
                                              step_timestamp=step_timestamp)
-        session.add(exec_step_reg)
+        session.add(exec_step_reg)        
         
         for user_id in users_set:
             reg = UserPageRankEvolution(user_id=int(user_id), rank_exec_id=exec_reg.id,
