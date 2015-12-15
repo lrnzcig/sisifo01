@@ -88,7 +88,7 @@ class TweetGraphLoader(TweetLoaderAbstract):
     def get_rank_suffix(self, date):
         return str(date.day) + "," + str(date.hour)
                 
-    def process_page_rank_evolution(self, global_page_rank_df, hours_step=1, do_sliding_window=False):
+    def process_page_rank_evolution(self, global_page_rank_df, hours_step=1, do_sliding_window=False, use_weights=False):
         users_pr_evolution = self.users['screen_name']
         # add rank for the full graph
         users_pr_evolution = pd.DataFrame(users_pr_evolution).join(global_page_rank_df['rank'])
@@ -119,7 +119,7 @@ class TweetGraphLoader(TweetLoaderAbstract):
             
         # from final date to end
         if do_sliding_window:
-            pagerank_df_step, len_tweets_step = self.rank_before_date(None, date_lower)
+            pagerank_df_step, len_tweets_step = self.rank_before_date(None, date_lower, use_weights=use_weights)
             users_pr_evolution = users_pr_evolution.join(pagerank_df_step['rank'], rsuffix='final')
                 
         return users_pr_evolution, columns
@@ -136,12 +136,15 @@ class TweetGraphLoader(TweetLoaderAbstract):
         weights.name = 'weight'
         return weights, len(weights), len(tweets_date)
     
-    def rank_before_date(self, date_upper, date_lower=None):
+    def rank_before_date(self, date_upper, date_lower=None, use_weights=False):
         G1=nx.DiGraph()
         G1.add_nodes_from(int(x) for x in self.users.index)
         weights1, len_edges, len_tweets = self.get_edges_before_date(date_upper, date_lower)
         G1.add_weighted_edges_from([(int(x), int(y), z) for ((x,y),z) in weights1.iteritems()])
-        pr1 = nx.pagerank(G1, weight='weight')
+        if use_weights:
+            pr1 = nx.pagerank(G1, weight='weight')
+        else:
+            pr1 = nx.pagerank(G1)
         pagerank_result1 = pd.Series(pr1, name="rank")
         pagerank_result1.index.name = 'user_id'
         pagerank_df1 = pd.DataFrame(pagerank_result1).join(self.users['screen_name'])
@@ -178,6 +181,7 @@ class Test(unittest.TestCase):
 
 
     def testName(self):
+        #pr_list_manager = upre.Manager(alchemy_echo=False, delete_all=False, user="TWEETDESMONTANDO")
         pr_list_manager = upre.Manager(alchemy_echo=False, delete_all=False, user="almadraba")
 
         
@@ -192,12 +196,22 @@ class Test(unittest.TestCase):
         hours_step = 4
         
         users_pr_evolution, columns = ranker.process_page_rank_evolution(global_page_rank_df, hours_step=hours_step, 
-                                                                         do_sliding_window=False)
+                                                                         do_sliding_window=False, use_weights=False)
         order = 1   
         for column in columns:
             # TODO timestamps + better column names !!
+            # http://stackoverflow.com/questions/7852855/how-to-convert-a-python-datetime-object-to-seconds
             pr_list_manager.dump(users_pr_evolution.index, "full", column, users_pr_evolution[column], order, hours_step, None)
             order = order + 1
+            
+        users_pr_evolution, columns = ranker.process_page_rank_evolution(global_page_rank_df, hours_step=hours_step, 
+                                                                         do_sliding_window=False, use_weights=True)
+        order = 1   
+        for column in columns:
+            # TODO timestamps + better column names !!
+            pr_list_manager.dump(users_pr_evolution.index, "full with weights", column, users_pr_evolution[column], order, hours_step, None)
+            order = order + 1
+        
         
         #top5
         ids = [282339186, 20909329, 341657886, 173665005, 187564239]
@@ -208,12 +222,21 @@ class Test(unittest.TestCase):
         ranker.graph_for_ids(ids, users_pr_evolution, columns, columns)
 
         users_pr_sliding_window, columns = ranker.process_page_rank_evolution(global_page_rank_df, hours_step=hours_step, 
-                                                                              do_sliding_window=True)
+                                                                              do_sliding_window=True, use_weights=False)
 
         order = 1   
         for column in columns:
             # TODO timestamps + better column names !!
             pr_list_manager.dump(users_pr_sliding_window.index, "window", column, users_pr_sliding_window[column], order, hours_step, None)
+            order = order + 1
+
+        users_pr_sliding_window, columns = ranker.process_page_rank_evolution(global_page_rank_df, hours_step=hours_step, 
+                                                                              do_sliding_window=True, use_weights=True)
+
+        order = 1   
+        for column in columns:
+            # TODO timestamps + better column names !!
+            pr_list_manager.dump(users_pr_sliding_window.index, "window with weights", column, users_pr_sliding_window[column], order, hours_step, None)
             order = order + 1
 
         ranker.graph_for_ids(ids, users_pr_sliding_window, columns, columns)
