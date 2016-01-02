@@ -6,7 +6,7 @@ Created on 29 de abr. de 2015
 import os
 import re
 import pandas as pd
-from nltk.twitter.util import json2csv, json2csv_entities
+from nltk.twitter.common import json2csv, json2csv_entities
 import logging.handlers
 
 

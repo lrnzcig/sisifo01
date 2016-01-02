@@ -3,7 +3,7 @@ Created on 15 de abr. de 2015
 
 @author: lorenzorubio
 '''
-from sqlalchemy import Column, Integer, String, Date, SmallInteger, create_engine
+from sqlalchemy import Column, BigInteger, Integer, String, Date, SmallInteger, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import schema_aux.utils as utils
@@ -16,17 +16,17 @@ class Tweet(CachedMixin, Base):
     __tablename__ = 'tweet'
     created_at = Column(Date)
     favorite_count = Column(Integer)
-    id = Column(Integer, primary_key=True)    
-    in_reply_to_status_id = Column(Integer) 
-    in_reply_to_user_id = Column(Integer)
+    id = Column(BigInteger, primary_key=True)    
+    in_reply_to_status_id = Column(BigInteger) 
+    in_reply_to_user_id = Column(BigInteger)
     place_full_name = Column(String(256))
     retweet_count = Column(Integer)
     retweet = Column(SmallInteger)
-    retweeted_id = Column(Integer)
-    retweeted_user_id = Column(Integer)
+    retweeted_id = Column(BigInteger)
+    retweeted_user_id = Column(BigInteger)
     text = Column(String(1024))
     truncated = Column(SmallInteger)
-    user_id = Column(Integer)
+    user_id = Column(BigInteger)
 
     def __repr__(self):
         return "<tweet(id='%s', text='%s', user_id='%s')>" % (
@@ -43,12 +43,12 @@ class Tweet(CachedMixin, Base):
 class User(CachedMixin, Base):
     __tablename__ = 'tuser'
     created_at = Column(Date)
-    contributors_enabled = Column(SmallInteger)
+    contributors_enabled = Column(Boolean)
     description = Column(String(1024))
     favourites_count = Column(Integer)
     followers_count = Column(Integer)
     friends_count = Column(Integer)
-    id = Column(Integer, primary_key=True)    
+    id = Column(BigInteger, primary_key=True)    
     is_translator = Column(SmallInteger)
     listed_count = Column(Integer)
     location = Column(String(256))

@@ -12,6 +12,7 @@ from loader.tweet_loader_abstract import TweetLoaderAbstract
 from schema_aux import user_page_rank_evolution as upre
 import networkx as nx
 import pandas as pd
+import numpy as np
 
 import plotly.plotly as py
 from plotly.graph_objs import *
@@ -80,12 +81,20 @@ class TweetGraphLoader(TweetLoaderAbstract):
         return pagerank_df
         
     def get_start_date(self):
-        return self.tweets.sort(['created_at_date'], ascending=True)[0:1]['created_at_date'].item()
+        date = self.tweets.sort(['created_at_date'], ascending=True)[0:1]['created_at_date'].item()
+        if isinstance(date, int):
+            date = np.datetime64(date, 'ns')
+        return date
 
     def get_end_date(self):
-        return self.tweets.sort(['created_at_date'], ascending=False)[0:1]['created_at_date'].item()
+        date = self.tweets.sort(['created_at_date'], ascending=False)[0:1]['created_at_date'].item()
+        if isinstance(date, int):
+            date = np.datetime64(date, 'ns')
+        return date
     
     def get_rank_suffix(self, date):
+        if isinstance(date, np.datetime64):
+            return str(date)[8:10] + "," + str(date)[11:13]
         return str(date.day) + "," + str(date.hour)
                 
     def process_page_rank_evolution(self, global_page_rank_df, hours_step=1, do_sliding_window=False, use_weights=False):
@@ -102,7 +111,7 @@ class TweetGraphLoader(TweetLoaderAbstract):
         columns = []
         do_continue = True
         while do_continue:
-            date_upper = date_upper + timedelta(hours=hours_step)
+            date_upper = date_upper + np.timedelta64(hours_step, 'h')
             if date_upper > end_date:
                 # this is the last execution
                 do_continue = False
@@ -120,7 +129,8 @@ class TweetGraphLoader(TweetLoaderAbstract):
         # from final date to end
         if do_sliding_window:
             pagerank_df_step, len_tweets_step = self.rank_before_date(None, date_lower, use_weights=use_weights)
-            users_pr_evolution = users_pr_evolution.join(pagerank_df_step['rank'], rsuffix='final')
+            if pagerank_df_step:
+                users_pr_evolution = users_pr_evolution.join(pagerank_df_step['rank'], rsuffix='final')
                 
         return users_pr_evolution, columns
         
@@ -132,6 +142,8 @@ class TweetGraphLoader(TweetLoaderAbstract):
             tweets_date = self.tweets
         if date_lower:
             tweets_date = tweets_date[tweets_date['created_at_date'] > date_lower]
+        if tweets_date.empty:
+            return None, 0, 0
         weights = tweets_date[tweets_date['retweet'] == 1].groupby(['user.id', 'retweeted_status.user.id']).size()
         weights.name = 'weight'
         return weights, len(weights), len(tweets_date)
@@ -140,6 +152,8 @@ class TweetGraphLoader(TweetLoaderAbstract):
         G1=nx.DiGraph()
         G1.add_nodes_from(int(x) for x in self.users.index)
         weights1, len_edges, len_tweets = self.get_edges_before_date(date_upper, date_lower)
+        if len_tweets == 0:
+            return None, 0
         G1.add_weighted_edges_from([(int(x), int(y), z) for ((x,y),z) in weights1.iteritems()])
         if use_weights:
             pr1 = nx.pagerank(G1, weight='weight')
@@ -181,19 +195,19 @@ class Test(unittest.TestCase):
 
 
     def testName(self):
-        #pr_list_manager = upre.Manager(alchemy_echo=False, delete_all=False, user="TWEETDESMONTANDO")
-        pr_list_manager = upre.Manager(alchemy_echo=False, delete_all=False, user="almadraba")
+        pr_list_manager = upre.Manager(alchemy_echo=False, delete_all=False, user="TWEETDESMONTANDO")
+        #pr_list_manager = upre.Manager(alchemy_echo=False, delete_all=False, user="almadraba")
 
         
         path = guess_path("twitter-files")
         filename = "tweets.20150506-180056.rest-desmontandoaciudadanos.json"
         ranker = TweetGraphLoader(path, filename)
         
-        pr_list_manager.delete_all()
-        
         global_page_rank_df = ranker.process_global_page_rank()
         
         hours_step = 4
+
+        pr_list_manager.delete_all()        
         
         users_pr_evolution, columns = ranker.process_page_rank_evolution(global_page_rank_df, hours_step=hours_step, 
                                                                          do_sliding_window=False, use_weights=False)
@@ -239,7 +253,7 @@ class Test(unittest.TestCase):
             pr_list_manager.dump(users_pr_sliding_window.index, "window with weights", column, users_pr_sliding_window[column], order, hours_step, None)
             order = order + 1
 
-        ranker.graph_for_ids(ids, users_pr_sliding_window, columns, columns)
+        #ranker.graph_for_ids(ids, users_pr_sliding_window, columns, columns)
 
         pass
 

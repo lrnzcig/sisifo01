@@ -251,8 +251,6 @@ class Test(unittest.TestCase):
         TODO
         
         - cleanup datatypes in abstract
-        
-        - python 2.7/3.4
         '''
         dumper.delete_all_entities()
         path = guess_path("twitter-files")
