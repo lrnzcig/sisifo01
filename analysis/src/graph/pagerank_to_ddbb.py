@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from nltk.compat import UTC
 from nltk.twitter.util import guess_path
 from loader.tweet_loader_abstract import TweetLoaderAbstract
-from schema_aux import user_page_rank_evolution as upre
+from schema_aux import user_rank_evolution as upre
 import networkx as nx
 import pandas as pd
 import numpy as np
